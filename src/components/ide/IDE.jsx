@@ -10,8 +10,9 @@ def foo(x) {
     if (x > 0) {
         let y = x;
         let i = 0;
-        for (i = 0; i < 2; i = i + 1) {
+        while (i < 2) {
             y = y * 2;
+            i = i + 1;
         }
         return y;
     }
@@ -32,16 +33,7 @@ console_put("new:");
 console_put(b);`;
 
 const DEFAULT_JSON_DATA = `{
-  "user": {
-    "name": "John",
-    "role": "admin"
-  },
-  "value1": 5,
-  "counter": 0,
-  "settings": {
-    "darkMode": false,
-    "notifications": true
-  }
+  "value1": 5
 }`;
 
 function IDE() {
