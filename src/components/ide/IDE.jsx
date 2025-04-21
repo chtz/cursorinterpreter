@@ -1,25 +1,109 @@
+import { useState } from 'react';
 import SourceEditor from './SourceEditor';
 import ConsoleOutput from './ConsoleOutput';
 import JsonEditor from './JsonEditor';
+import { Interpreter } from '../../interpreter';
+
+// Default values for the editors
+const DEFAULT_SOURCE = `// Sample program
+def foo(x) {
+    if (x > 0) {
+        let y = x;
+        let i = 0;
+        for (i = 0; i < 2; i = i + 1) {
+            y = y * 2;
+        }
+        return y;
+    }
+    else {
+        return x * -2;
+    }
+}
+
+let a = io_get('value1'); // library function (access to json)
+let msg = "old:";
+console_put(msg); // library function (access to log area)
+console_put(a);
+
+let b = foo(a);
+
+io_put('value1', b); 
+console_put("new:");
+console_put(b);`;
+
+const DEFAULT_JSON_DATA = `{
+  "user": {
+    "name": "John",
+    "role": "admin"
+  },
+  "value1": 5,
+  "counter": 0,
+  "settings": {
+    "darkMode": false,
+    "notifications": true
+  }
+}`;
 
 function IDE() {
+  const [source, setSource] = useState(DEFAULT_SOURCE);
+  const [jsonData, setJsonData] = useState(DEFAULT_JSON_DATA);
+  const [output, setOutput] = useState('');
+  const interpreter = new Interpreter();
+  
+  const handleRun = () => {
+    try {
+      setOutput('$ Parsing program...\n');
+      
+      // Parse the source code
+      const result = interpreter.parse(source);
+      
+      if (result.success) {
+        // Get the AST as JSON
+        const astJson = interpreter.getAstJson();
+        
+        // Format the AST for display
+        const formattedAst = JSON.stringify(astJson, null, 2);
+        
+        setOutput(prevOutput => prevOutput + 
+          '$ Parsing successful!\n\n' +
+          '$ Abstract Syntax Tree (AST):\n' +
+          formattedAst + '\n\n' +
+          '$ Program execution will be implemented in the next phase.'
+        );
+      } else {
+        // Show parsing errors
+        const errorMessages = interpreter.formatErrors();
+        setOutput(prevOutput => prevOutput + '$ Parsing failed!\n\n' + errorMessages);
+      }
+    } catch (error) {
+      setOutput(prevOutput => prevOutput + `$ Error: ${error.message}`);
+    }
+  };
+  
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] gap-4">
       <div className="flex flex-grow gap-4 min-h-0">
         {/* Left side: Source Editor (takes 2/3 of the width) */}
         <div className="w-2/3 min-h-0">
-          <SourceEditor />
+          <SourceEditor 
+            source={source} 
+            onSourceChange={setSource} 
+            onRun={handleRun} 
+          />
         </div>
         
         {/* Right side: JSON Editor (takes 1/3 of the width) */}
         <div className="w-1/3 min-h-0">
-          <JsonEditor />
+          <JsonEditor
+            jsonData={jsonData}
+            onJsonChange={setJsonData}
+          />
         </div>
       </div>
       
       {/* Bottom: Console Output (fixed height) */}
       <div className="h-1/3 min-h-0">
-        <ConsoleOutput />
+        <ConsoleOutput output={output} />
       </div>
     </div>
   );

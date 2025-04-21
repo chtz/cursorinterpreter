@@ -73,7 +73,7 @@ Statement           ::= FunctionDeclaration
                       | VariableDeclaration
                       | AssignmentStatement
                       | IfStatement
-                      | ForStatement
+                      | WhileStatement
                       | ReturnStatement
                       | ExpressionStatement
                       | Block
@@ -92,7 +92,7 @@ AssignmentStatement ::= Identifier "=" Expression ";"
 /* Control structures */
 IfStatement         ::= "if" "(" Expression ")" Block ("else" (IfStatement | Block))?
 
-ForStatement        ::= "for" "(" (VariableDeclaration | AssignmentStatement | ";") Expression ";" Expression ")" Block
+WhileStatement      ::= "while" "(" Expression ")" Block
 
 ReturnStatement     ::= "return" Expression? ";"
 
@@ -144,6 +144,11 @@ Comment             ::= "//" [^\n]* "\n"
                       | "/*" ([^*] | "*" [^/])* "*/"
 ```
 
+> **Note**: The language has the following restrictions:
+> 1. It does not support increment/decrement operators (`++`, `--`). Instead, use assignment expressions like `i = i + 1` or `i = i - 1`.
+> 2. It uses while loops instead of for loops for iteration.
+> 3. Variables must be declared before they are used.
+
 ### Built-in Functions
 
 The language provides several built-in functions for I/O operations:
@@ -158,8 +163,10 @@ The language provides several built-in functions for I/O operations:
 def foo(x) {
     if (x > 0) {
         let y = x;
-        for (i = 0; i < 2; i++) {
+        let i = 0;
+        while (i < 2) {
             y = y * 2;
+            i = i + 1;
         }
         return y;
     }
