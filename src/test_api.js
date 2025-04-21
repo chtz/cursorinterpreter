@@ -1,3 +1,14 @@
+/**
+ * DEBUG UTILITY FILE - NOT USED IN PRODUCTION
+ * 
+ * This file provides debugging utilities for testing API functionality.
+ * It's kept for development and troubleshooting purposes only.
+ * 
+ * Usage: 
+ * 1. Run with Node.js: node src/test_api.js
+ * 2. Check the console output for detailed information about API behavior
+ */
+
 import { Interpreter } from './interpreter/index.js';
 
 function testApiFunction() {

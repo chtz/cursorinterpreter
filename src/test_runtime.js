@@ -1,3 +1,14 @@
+/**
+ * DEBUG UTILITY FILE - NOT USED IN PRODUCTION
+ * 
+ * This file provides debugging utilities for the EvaluationContext class.
+ * It's kept for development and troubleshooting purposes only.
+ * 
+ * Usage: 
+ * 1. Run with Node.js: node src/test_runtime.js
+ * 2. Check the console output for detailed information about EvaluationContext behavior
+ */
+
 import { EvaluationContext } from './interpreter/runtime.js';
 
 // Test EvaluationContext

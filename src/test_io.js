@@ -1,3 +1,14 @@
+/**
+ * DEBUG UTILITY FILE - NOT USED IN PRODUCTION
+ * 
+ * This file provides debugging utilities for testing I/O operations.
+ * It's kept for development and troubleshooting purposes only.
+ * 
+ * Usage: 
+ * 1. Run with Node.js: node src/test_io.js
+ * 2. Check the console output for detailed information about I/O behavior
+ */
+
 import { Interpreter } from './interpreter/index.js';
 
 // Test io_put behavior
