@@ -4,7 +4,7 @@ function Footer() {
   return (
     <footer className="bg-gray-800 text-white p-4 mt-auto">
       <div className="container mx-auto text-center">
-        <p>&copy; {year} Cursor Interpreter SPA. All rights reserved.</p>
+        <p>&copy; {year} cht_z. All rights reserved.</p>
       </div>
     </footer>
   );
