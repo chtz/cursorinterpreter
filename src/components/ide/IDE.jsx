@@ -21,14 +21,14 @@ def foo(x) {
     }
 }
 
-let a = io_get('value1'); // library function (access to json)
+let a = io_get('score'); // library function (access to json)
 let msg = "old:";
 console_put(msg); // library function (access to log area)
 console_put(a);
 
 let b = foo(a);
 
-io_put('value1', b); 
+io_put('score', b); 
 console_put("new:");
 console_put(b);`;
 
