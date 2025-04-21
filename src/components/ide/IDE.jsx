@@ -59,8 +59,7 @@ function IDE() {
         // Format the AST for display
         const formattedAst = JSON.stringify(astJson, null, 2);
         
-        setOutput(output => output + 
-          '$ Parsing successful!\n\n' +
+        setOutput('$ Parsing program...\n$ Parsing successful!\n\n' +
           '$ Abstract Syntax Tree (AST):\n' +
           formattedAst + '\n\n' +
           '$ Program execution will be implemented in the next phase.'
@@ -68,10 +67,10 @@ function IDE() {
       } else {
         // Show parsing errors
         const errorMessages = interpreter.formatErrors();
-        setOutput(output => output + '$ Parsing failed!\n\n' + errorMessages);
+        setOutput('$ Parsing program...\n$ Parsing failed!\n\n' + errorMessages);
       }
     } catch (error) {
-      setOutput(output => `$ Error: ${error.message}`);
+      setOutput(`$ Error: ${error.message}`);
     }
   };
   

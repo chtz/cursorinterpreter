@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 function SourceEditor({ source, onSourceChange, onRun }) {
   return (
     <div className="border border-gray-300 rounded-md h-full flex flex-col">

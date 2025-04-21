@@ -9,8 +9,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          interpreter: ['./src/interpreter/index.js', './src/interpreter/parser.js', './src/interpreter/lexer.js', './src/interpreter/ast.js', './src/interpreter/tokens.js'],
+          vendor: ['react', 'react-dom', 'react-router-dom'],
         }
       }
     },
