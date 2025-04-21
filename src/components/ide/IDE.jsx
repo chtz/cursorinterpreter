@@ -50,23 +50,64 @@ function IDE() {
       const interpreter = new Interpreter();
       
       // Parse the source code
-      const result = interpreter.parse(source);
+      const parseResult = interpreter.parse(source);
       
-      if (result.success) {
-        // Get the AST as JSON
-        const astJson = interpreter.getAstJson();
+      if (parseResult.success) {
+        setOutput('$ Parsing program...\n$ Parsing successful!\n\n');
         
-        // Format the AST for display
-        const formattedAst = JSON.stringify(astJson, null, 2);
-        
-        setOutput('$ Parsing program...\n$ Parsing successful!\n\n' +
-          '$ Abstract Syntax Tree (AST):\n' +
-          formattedAst + '\n\n' +
-          '$ Program execution will be implemented in the next phase.'
-        );
+        try {
+          // Parse the JSON data
+          const parsedJsonData = JSON.parse(jsonData);
+          
+          // Create an array to capture console output
+          const consoleOutput = [];
+          
+          // Execute the program
+          setOutput(prevOutput => prevOutput + '$ Executing program...\n');
+          const evalResult = interpreter.evaluate(parsedJsonData, consoleOutput);
+          
+          if (evalResult.success) {
+            // Format the updated JSON
+            const updatedJson = JSON.stringify(evalResult.jsonData, null, 2);
+            
+            // Update the JSON editor with the new values
+            setJsonData(updatedJson);
+            
+            // Format and display console output
+            const formattedOutput = consoleOutput.map(line => `> ${line}`).join('\n');
+            
+            setOutput(prevOutput => 
+              prevOutput + 
+              '$ Execution completed successfully.\n\n' +
+              '$ Program output:\n' +
+              formattedOutput + '\n\n' +
+              '$ Result: ' + (evalResult.result !== undefined ? JSON.stringify(evalResult.result) : 'undefined')
+            );
+          } else {
+            // Show execution errors
+            const errorMessages = evalResult.errors.map(err => 
+              `[${err.line}:${err.column}] ${err.message}`
+            ).join('\n');
+            
+            setOutput(prevOutput => 
+              prevOutput + 
+              '$ Execution failed!\n\n' + 
+              errorMessages
+            );
+          }
+        } catch (jsonError) {
+          setOutput(prevOutput => 
+            prevOutput + 
+            `$ JSON parsing error: ${jsonError.message}\n` +
+            '$ Please check your JSON data and try again.'
+          );
+        }
       } else {
         // Show parsing errors
-        const errorMessages = interpreter.formatErrors();
+        const errorMessages = parseResult.errors.map(err => 
+          `[${err.line}:${err.column}] ${err.message}`
+        ).join('\n');
+        
         setOutput('$ Parsing program...\n$ Parsing failed!\n\n' + errorMessages);
       }
     } catch (error) {
