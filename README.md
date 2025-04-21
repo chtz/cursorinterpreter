@@ -1,87 +1,47 @@
-# Cursor Interpreter SPA
+# Cursor Interpreter
 
-A simple Single Page Application built with modern web technologies following KISS, DRY, and YAGNI principles.
+A simple, lightweight code interpreter built with modern web technologies following KISS, DRY, and YAGNI principles. The project includes both a custom language interpreter and a browser-based IDE for writing and running code.
+
+## Quick Start
+
+1. Clone the repository
+2. Run `npm install` to install dependencies
+3. Run `npm run dev` to start the development server
+4. Open your browser to the displayed URL
 
 ## Project Overview
 
-This project is an interactive code interpreter environment built with React. It features a 3-panel IDE-like interface where users can write code, view/edit JSON data, and see console output. The application is designed to interpret custom code that can interact with JSON data structures.
+This project combines:
 
-## Technologies Used
+1. **Custom Language Interpreter**: A JavaScript-based interpreter for a simple programming language
+2. **Interactive Web IDE**: A React-based interface with code editor, JSON data viewer, and console output
 
-- **React**: Frontend library for building user interfaces
-- **Vite**: Fast, modern build tool and development server
-- **React Router**: Client-side routing for single page applications
-- **Tailwind CSS**: Utility-first CSS framework for rapid UI development
-- **ESLint**: Code linting and style enforcement
-- **Jest**: JavaScript testing framework for unit testing the custom interpreter
-
-## Directory Structure
-
-```
-cursorinterpreter-spa/
-├── public/               # Static files
-├── src/                  # Source code
-│   ├── components/       # Reusable UI components
-│   │   ├── Header.jsx    # Application header
-│   │   ├── Footer.jsx    # Application footer
-│   │   ├── Layout.jsx    # Main layout component (with Outlet)
-│   │   └── ide/          # IDE-related components
-│   │       ├── IDE.jsx             # Main IDE component integrating the panels
-│   │       ├── SourceEditor.jsx    # Code editor with run button
-│   │       ├── JsonEditor.jsx      # JSON data structure editor
-│   │       └── ConsoleOutput.jsx   # Console output panel
-│   ├── pages/            # Page components
-│   │   └── Home.jsx      # Homepage component
-│   ├── interpreter/      # Custom language interpreter components
-│   │   ├── index.js      # Main interpreter interface
-│   │   ├── lexer.js      # Tokenizes source code
-│   │   ├── parser.js     # Builds AST from tokens
-│   │   ├── ast.js        # Abstract Syntax Tree node definitions
-│   │   └── tokens.js     # Token type definitions
-│   ├── tests/            # Test files for the interpreter
-│   │   ├── jestUtils.js  # Utility functions for testing
-│   │   └── __tests__/    # Test suites
-│   ├── App.jsx           # Root component with router setup
-│   ├── main.jsx          # Application entry point
-│   └── index.css         # Global styles with Tailwind directives
-├── index.html            # HTML entry point
-├── tailwind.config.js    # Tailwind CSS configuration
-├── postcss.config.js     # PostCSS configuration
-├── vite.config.js        # Vite configuration
-├── babel.config.js       # Babel configuration for Jest
-├── jest.config.js        # Jest configuration for testing
-├── eslint.config.js      # ESLint configuration
-└── package.json          # Project dependencies and scripts
-```
-
-## Design Decisions
-
-1. **JavaScript Only**: Chose JavaScript over TypeScript for simplicity
-2. **Component Structure**: Separated layout components from page content
-3. **React Router**: Used for client-side navigation between pages
-4. **Tailwind CSS**: Used for styling with utility classes
-5. **Flexible Layout**: Created with responsive design in mind
-6. **IDE Interface**: Split into three main panels:
-   - Source Code Editor (top-left): For writing code with syntax highlighting
-   - JSON Editor (right): For editing data structures that code can interact with
-   - Console Output (bottom): For displaying program execution results
-7. **Build Optimization**: Vite configuration optimized for production:
-   - Chunking strategy for React and interpreter code
-   - Source maps enabled for debugging
-   - Terser used for minification
-8. **Test Coverage**: Jest configured to collect and report test coverage
-9. **Fresh Interpreter Instances**: Creates a new interpreter for each run to ensure clean state
-10. **No Caching**: The application avoids caching to ensure outputs always reflect the current program state
+The interpreter can read/write JSON data and produce console output, making it suitable for data transformation tasks and algorithm demonstrations.
 
 ## Interpreter Design
 
-The application includes a custom interpreter that:
-- Executes code written in the source editor
-- Provides functions to interact with the JSON data
-- Outputs results and logs to the console panel
-- Maintains a runtime environment for script execution
+### Core Components
 
-### Language Grammar (EBNF)
+The interpreter consists of five main parts:
+
+1. **Lexer** (`lexer.js`): Converts source code into tokens
+2. **Parser** (`parser.js`): Builds an Abstract Syntax Tree (AST) from tokens
+3. **AST** (`ast.js`): Defines node types for the syntax tree
+4. **Runtime** (`runtime.js`): Provides the execution environment
+5. **Interpreter** (`index.js`): Orchestrates the parsing and evaluation process
+
+### Language Features
+
+The language supports:
+
+- Variable declaration and assignment
+- Basic data types: numbers, strings, booleans, and null
+- Arithmetic and logical operators
+- Control flow: if/else statements and while loops
+- Function declarations and calls
+- Built-in I/O functions
+
+### Grammar (EBNF)
 
 ```ebnf
 /* Program structure */
@@ -163,90 +123,147 @@ Comment             ::= "//" [^\n]* "\n"
                       | "/*" ([^*] | "*" [^/])* "*/"
 ```
 
-> **Note**: The language has the following restrictions:
-> 1. It does not support increment/decrement operators (`++`, `--`). Instead, use assignment expressions like `i = i + 1` or `i = i - 1`.
-> 2. It uses while loops instead of for loops for iteration.
-> 3. Variables must be declared before they are used.
+> **Note**: The language has several intentional simplifications:
+> - No increment/decrement operators (use `i = i + 1` instead)
+> - While loops only (no for loops)
+> - Variables must be declared before use
+> - No classes or object-oriented features
+> - No module system or imports
 
 ### Built-in Functions
 
-The language provides several built-in functions for I/O operations:
+Three core I/O functions are provided:
 
 - `io_get(key)`: Retrieves a value from the JSON data structure by key
 - `io_put(key, value)`: Stores a value in the JSON data structure by key
 - `console_put(value)`: Outputs a value to the console
 
-### Sample Script 
+### Using the Interpreter in Code
+
+```javascript
+import { Interpreter } from './interpreter/index.js';
+
+// Create an interpreter instance
+const interpreter = new Interpreter();
+
+// Parse source code
+const parseResult = interpreter.parse(`
+  let x = 42;
+  console_put("The value is: " + x);
+`);
+
+// Check for parsing errors
+if (!parseResult.success) {
+  console.error('Parsing errors:', parseResult.errors);
+  return;
+}
+
+// Setup data and output containers
+const jsonData = { /* initial data */ };
+const consoleOutput = [];
+
+// Evaluate the code
+const evalResult = interpreter.evaluate(jsonData, consoleOutput);
+
+// Check results
+if (evalResult.success) {
+  console.log('Result:', evalResult.result);
+  console.log('Console output:', consoleOutput);
+  console.log('JSON data:', jsonData);
+} else {
+  console.error('Evaluation errors:', evalResult.errors);
+}
+```
+
+### Sample Program
+
+This program demonstrates core language features including variables, functions, conditionals, loops, and I/O:
 
 ```
 def foo(x) {
-    if (x > 0) {
-        let y = x;
-        let i = 0;
-        while (i < 2) {
-            y = y * 2;
-            i = i + 1;
-        }
-        return y;
+  if (x > 0) {
+    let y = x;
+    let i = 0;
+    while (i < 2) {
+      y = y * 2;
+      i = i + 1;
     }
-    else {
-        return x * -2;
-    }
+    return y;
+  }
+  else {
+    return x * -2;
+  }
 }
 
-let a = io_get('value1'); // library function (access to json)
+let a = io_get('value1');
 let msg = "old:";
-console_put(msg); // library function (access to log area)
+console_put(msg);
 console_put(a);
 
 let b = foo(a);
 
 io_put('value1', b); 
 console_put("new:");
-console_put(b); 
+console_put(b);
 ```
 
-## Configuration Files
+## Web IDE
 
-### Vite Configuration (vite.config.js)
-- **Plugins**: Uses React plugin for JSX support
-- **Build Optimization**:
-  - Custom chunking for React dependencies and interpreter code
-  - Source maps enabled for production debugging
-  - Terser minification for smaller bundle size
-- **No Caching**: Dependency pre-bundling and server caching are deliberately disabled
-- **Development Server**: Configured with WebSocket HMR for faster refreshes
+The project includes a browser-based IDE with three panels:
 
-### Babel Configuration (babel.config.js)
-- **Presets**:
-  - `@babel/preset-env` for modern JavaScript support, targeting current Node version
-  - `@babel/preset-react` for JSX support in tests
+1. **Source Editor**: Write code with syntax highlighting
+2. **JSON Editor**: View and modify the JSON data structure 
+3. **Console Output**: See program execution results
 
-### Jest Configuration (jest.config.js)
-- **Test Environment**: Configured for Node.js
-- **Module Mapping**: Handles ES Modules correctly
-- **Coverage**: Collects and reports test coverage in both text and LCOV formats
-- **Test Pattern**: Runs any file in `__tests__` directories with `.test.js` extension
+This interface makes it easy to experiment with the language and see results instantly.
 
-### ESLint Configuration (eslint.config.js)
-- **Rules**: Includes recommended rules for JavaScript and React
-- **Plugins**: Supports React Hooks and React Refresh
+## Project Structure
 
-### Tailwind Configuration (tailwind.config.js)
-- **Content**: Scans all HTML and React components for class names
-- **Theme**: Uses default Tailwind theme with extension capability
+```
+cursorinterpreter/
+├── public/               # Static files
+├── src/                  # Source code
+│   ├── components/       # React components
+│   │   └── ide/          # IDE-related components
+│   ├── pages/            # Page components
+│   ├── interpreter/      # Interpreter components
+│   │   ├── index.js      # Main interface
+│   │   ├── lexer.js      # Tokenizer
+│   │   ├── parser.js     # Parser
+│   │   ├── ast.js        # AST nodes
+│   │   ├── runtime.js    # Execution environment
+│   │   └── tokens.js     # Token definitions
+│   ├── tests/            # Test files
+│   ├── App.jsx           # Root component
+│   ├── main.jsx          # Entry point
+│   └── index.css         # Global styles
+├── index.html            # HTML entry point
+├── vite.config.js        # Vite configuration
+├── jest.config.js        # Jest configuration
+└── package.json          # Dependencies
+```
 
-## Available Scripts
+## Design Principles
+
+1. **Simplicity Over Performance**: Code prioritizes readability and maintainability
+2. **Clean State**: Each evaluation creates a fresh environment to prevent side effects
+3. **Explicit I/O**: All input/output operations use dedicated functions for clarity
+4. **Position-Aware Errors**: Both parsing and runtime errors include line/column information
+5. **Isolated Execution**: The interpreter operates in a contained environment
+
+## Development
+
+### Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
-- `npm run preview` - Preview production build locally
-- `npm run lint` - Run ESLint to check code quality
-- `npm run test` - Run Jest tests for the interpreter
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run test` - Run interpreter tests
 
-## Getting Started
+### Technologies Used
 
-1. Clone the repository
-2. Run `npm install` to install dependencies
-3. Run `npm run dev` to start development server
-4. Open http://localhost:5173 in your browser
+- **React**: Frontend user interface
+- **Vite**: Build tool and development server
+- **Tailwind CSS**: Styling
+- **Jest**: Testing framework
