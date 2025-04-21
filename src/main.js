@@ -1,10 +1,7 @@
-import { runAllTests } from './tests';
+// Main application entry point
 
-// Run tests when the module is loaded
-const testResults = runAllTests();
+// Application logic will be initialized here
+// The tests are now handled by Jest and run via the npm test command
 
-// Make test results available globally for debugging
-window.testResults = testResults;
-
-// Export test results for potential use in other modules
-export { testResults }; 
+// Main application state can be exported from this module
+export {}; 
