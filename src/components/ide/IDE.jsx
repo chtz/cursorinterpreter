@@ -40,11 +40,14 @@ function IDE() {
   const [source, setSource] = useState(DEFAULT_SOURCE);
   const [jsonData, setJsonData] = useState(DEFAULT_JSON_DATA);
   const [output, setOutput] = useState('');
-  const interpreter = new Interpreter();
   
   const handleRun = () => {
     try {
+      // Start with a fresh console output
       setOutput('$ Parsing program...\n');
+      
+      // Create a fresh interpreter instance to avoid any caching issues
+      const interpreter = new Interpreter();
       
       // Parse the source code
       const result = interpreter.parse(source);
@@ -56,7 +59,7 @@ function IDE() {
         // Format the AST for display
         const formattedAst = JSON.stringify(astJson, null, 2);
         
-        setOutput(prevOutput => prevOutput + 
+        setOutput(output => output + 
           '$ Parsing successful!\n\n' +
           '$ Abstract Syntax Tree (AST):\n' +
           formattedAst + '\n\n' +
@@ -65,10 +68,10 @@ function IDE() {
       } else {
         // Show parsing errors
         const errorMessages = interpreter.formatErrors();
-        setOutput(prevOutput => prevOutput + '$ Parsing failed!\n\n' + errorMessages);
+        setOutput(output => output + '$ Parsing failed!\n\n' + errorMessages);
       }
     } catch (error) {
-      setOutput(prevOutput => prevOutput + `$ Error: ${error.message}`);
+      setOutput(output => `$ Error: ${error.message}`);
     }
   };
   

@@ -9,6 +9,8 @@ function JsonEditor({ jsonData, onJsonChange }) {
         placeholder="{}"
         value={jsonData}
         onChange={(e) => onJsonChange(e.target.value)}
+        aria-label="JSON data editor"
+        spellCheck="false"
       />
     </div>
   );

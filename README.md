@@ -32,6 +32,15 @@ cursorinterpreter-spa/
 │   │       └── ConsoleOutput.jsx   # Console output panel
 │   ├── pages/            # Page components
 │   │   └── Home.jsx      # Homepage component
+│   ├── interpreter/      # Custom language interpreter components
+│   │   ├── index.js      # Main interpreter interface
+│   │   ├── lexer.js      # Tokenizes source code
+│   │   ├── parser.js     # Builds AST from tokens
+│   │   ├── ast.js        # Abstract Syntax Tree node definitions
+│   │   └── tokens.js     # Token type definitions
+│   ├── tests/            # Test files for the interpreter
+│   │   ├── jestUtils.js  # Utility functions for testing
+│   │   └── __tests__/    # Test suites
 │   ├── App.jsx           # Root component with router setup
 │   ├── main.jsx          # Application entry point
 │   └── index.css         # Global styles with Tailwind directives
@@ -39,6 +48,8 @@ cursorinterpreter-spa/
 ├── tailwind.config.js    # Tailwind CSS configuration
 ├── postcss.config.js     # PostCSS configuration
 ├── vite.config.js        # Vite configuration
+├── babel.config.js       # Babel configuration for Jest
+├── jest.config.js        # Jest configuration for testing
 ├── eslint.config.js      # ESLint configuration
 └── package.json          # Project dependencies and scripts
 ```
@@ -54,10 +65,17 @@ cursorinterpreter-spa/
    - Source Code Editor (top-left): For writing code with syntax highlighting
    - JSON Editor (right): For editing data structures that code can interact with
    - Console Output (bottom): For displaying program execution results
+7. **Build Optimization**: Vite configuration optimized for production:
+   - Chunking strategy for React and interpreter code
+   - Source maps enabled for debugging
+   - Terser used for minification
+8. **Test Coverage**: Jest configured to collect and report test coverage
+9. **Fresh Interpreter Instances**: Creates a new interpreter for each run to ensure clean state
+10. **No Caching**: The application avoids caching to ensure outputs always reflect the current program state
 
 ## Interpreter Design
 
-The application will eventually include a custom interpreter that:
+The application includes a custom interpreter that:
 - Executes code written in the source editor
 - Provides functions to interact with the JSON data
 - Outputs results and logs to the console panel
@@ -187,6 +205,36 @@ io_put('value1', b);
 console_put("new:");
 console_put(b); 
 ```
+
+## Configuration Files
+
+### Vite Configuration (vite.config.js)
+- **Plugins**: Uses React plugin for JSX support
+- **Build Optimization**:
+  - Custom chunking for React dependencies and interpreter code
+  - Source maps enabled for production debugging
+  - Terser minification for smaller bundle size
+- **No Caching**: Dependency pre-bundling and server caching are deliberately disabled
+- **Development Server**: Configured with WebSocket HMR for faster refreshes
+
+### Babel Configuration (babel.config.js)
+- **Presets**:
+  - `@babel/preset-env` for modern JavaScript support, targeting current Node version
+  - `@babel/preset-react` for JSX support in tests
+
+### Jest Configuration (jest.config.js)
+- **Test Environment**: Configured for Node.js
+- **Module Mapping**: Handles ES Modules correctly
+- **Coverage**: Collects and reports test coverage in both text and LCOV formats
+- **Test Pattern**: Runs any file in `__tests__` directories with `.test.js` extension
+
+### ESLint Configuration (eslint.config.js)
+- **Rules**: Includes recommended rules for JavaScript and React
+- **Plugins**: Supports React Hooks and React Refresh
+
+### Tailwind Configuration (tailwind.config.js)
+- **Content**: Scans all HTML and React components for class names
+- **Theme**: Uses default Tailwind theme with extension capability
 
 ## Available Scripts
 
