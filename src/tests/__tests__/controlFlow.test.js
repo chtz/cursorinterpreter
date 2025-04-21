@@ -3,185 +3,196 @@ import { TestContext } from '../jestUtils.js';
 // Test cases for control flow constructs: if, while, return
 describe('Control Flow Constructs', () => {
   
-  test('If Statement', () => {
+  test('If Statement True Branch', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      if (x > 5) {
-        let y = 10;
+    ctx.evaluate(`
+      let result;
+      if (10 > 5) {
+        result = "true branch";
       }
+      result;
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('IfStatement');
-    ctx.assertAstStructure('statements.0', {
-      type: 'IfStatement'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("true branch");
   });
   
-  test('If-Else Statement', () => {
+  test('If-Else Statement True Branch', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      if (x > 5) {
-        let y = 10;
+    ctx.evaluate(`
+      let result;
+      if (10 > 5) {
+        result = "true branch";
       } else {
-        let y = 20;
+        result = "false branch";
       }
+      result;
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('IfStatement');
-    ctx.assertAstStructure('statements.0', {
-      type: 'IfStatement'
-    });
-    // Don't check the structure of 'alternative', just verify it has the right type
-    ctx.assertAstStructure('statements.0.alternative', {
-      type: 'BlockStatement'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("true branch");
   });
   
-  test('If-Else If Statement', () => {
+  test('If-Else Statement False Branch', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      if (x > 10) {
-        let y = 10;
-      } else if (x > 5) {
-        let y = 20;
-      }
-    `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('IfStatement');
-    // The alternative should be another IfStatement
-    ctx.assertAstStructure('statements.0.alternative', {
-      type: 'IfStatement'
-    });
-  });
-  
-  test('If-Else If-Else Statement', () => {
-    const ctx = new TestContext();
-    ctx.parse(`
-      if (x > 10) {
-        let y = 10;
-      } else if (x > 5) {
-        let y = 20;
+    ctx.evaluate(`
+      let result;
+      if (5 > 10) {
+        result = "true branch";
       } else {
-        let y = 30;
+        result = "false branch";
       }
+      result;
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('IfStatement');
-    // The alternative of the first if should be another IfStatement
-    ctx.assertAstStructure('statements.0.alternative', {
-      type: 'IfStatement'
-    });
-    // And that IfStatement should have an alternative (the else block)
-    ctx.assertAstStructure('statements.0.alternative.alternative', {
-      type: 'BlockStatement' 
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("false branch");
+  });
+  
+  test('If-Else If Statement First Branch', () => {
+    const ctx = new TestContext();
+    ctx.evaluate(`
+      let x = 15;
+      let result;
+      if (x > 10) {
+        result = "first branch";
+      } else if (x > 5) {
+        result = "second branch";
+      }
+      result;
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("first branch");
+  });
+  
+  test('If-Else If Statement Second Branch', () => {
+    const ctx = new TestContext();
+    ctx.evaluate(`
+      let x = 7;
+      let result;
+      if (x > 10) {
+        result = "first branch";
+      } else if (x > 5) {
+        result = "second branch";
+      }
+      result;
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("second branch");
+  });
+  
+  test('If-Else If-Else Statement Else Branch', () => {
+    const ctx = new TestContext();
+    ctx.evaluate(`
+      let x = 3;
+      let result;
+      if (x > 10) {
+        result = "first branch";
+      } else if (x > 5) {
+        result = "second branch";
+      } else {
+        result = "else branch";
+      }
+      result;
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("else branch");
   });
   
   test('While Loop Basic', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       let i = 0;
-      while (i < 10) {
-        let x = i * 2;
+      let sum = 0;
+      while (i < 5) {
+        sum = sum + i;
         i = i + 1;
       }
+      sum;
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('WhileStatement');
-    ctx.assertAstStructure('statements.1', {
-      type: 'WhileStatement'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(10); // 0 + 1 + 2 + 3 + 4 = 10
   });
   
-  test('While Loop With Condition', () => {
+  test('While Loop Zero Iterations', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      let i = 0;
-      while (i < 10) {
-        let x = i * 2;
+    ctx.evaluate(`
+      let i = 10;
+      let result = "initial";
+      while (i < 5) {
+        result = "changed";
         i = i + 1;
       }
+      result;
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('WhileStatement');
-    // Check condition structure
-    ctx.assertAstStructure('statements.1.condition', {
-      type: 'InfixExpression',
-      operator: '<'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("initial"); // Loop body should not execute
   });
   
   test('Nested While Loops', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       let i = 0;
+      let sum = 0;
       while (i < 3) {
         let j = 0;
         while (j < 2) {
-          let x = i * j;
+          sum = sum + (i * j);
           j = j + 1;
         }
         i = i + 1;
       }
+      sum;
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('WhileStatement');
-    // Check for nested while loop in the body
-    ctx.assertAstStructure('statements.1.body.statements.1', {
-      type: 'WhileStatement'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(3); // (0*0 + 0*1) + (1*0 + 1*1) + (2*0 + 2*1) = 0 + 1 + 2 = 3
   });
   
-  // Empty return statement may not be supported in the parser, changing the test
-  test('Return Statement With Null Value', () => {
+  test('Function With Return Null', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def foo() {
         return null;
       }
+      foo();
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('FunctionDeclaration');
-    ctx.assertContainsNodeType('ReturnStatement');
-    // Value should be a null literal
-    ctx.assertAstStructure('statements.0.body.statements.0', {
-      type: 'ReturnStatement'
-    });
-    ctx.assertAstStructure('statements.0.body.statements.0.value', {
-      type: 'NullLiteral'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(null);
   });
   
-  test('Return Statement With Value', () => {
+  test('Function With Return Value', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def foo() {
         return 42;
       }
+      foo();
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('ReturnStatement');
-    ctx.assertAstStructure('statements.0.body.statements.0', {
-      type: 'ReturnStatement'
-    });
-    ctx.assertAstStructure('statements.0.body.statements.0.value', {
-      type: 'NumberLiteral',
-      value: 42
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(42);
   });
   
-  test('Return Statement With Expression', () => {
+  test('Function With Return Expression', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      def foo() {
-        return x + 5;
+    ctx.evaluate(`
+      def add(x, y) {
+        return x + y;
       }
+      add(3, 5);
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('ReturnStatement');
-    ctx.assertAstStructure('statements.0.body.statements.0.value', {
-      type: 'InfixExpression',
-      operator: '+'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(8);
+  });
+  
+  test('Early Return In Function', () => {
+    const ctx = new TestContext();
+    ctx.evaluate(`
+      def test(x) {
+        if (x < 0) {
+          return "negative";
+        }
+        return "positive or zero";
+      }
+      test(-5);
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("negative");
   });
 }); 

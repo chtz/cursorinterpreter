@@ -3,105 +3,74 @@ import { TestContext } from '../jestUtils.js';
 // Test cases for functions and function calls
 describe('Functions and Function Calls', () => {
   
-  test('Function Declaration', () => {
+  test('Function Declaration And Call', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
+      add(2, 3);
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('FunctionDeclaration');
-    ctx.assertAstStructure('statements.0', {
-      type: 'FunctionDeclaration',
-      name: 'add',
-      parameters: ['a', 'b']
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(5);
   });
   
   test('Function Declaration No Parameters', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def greet() {
         return "Hello, world!";
       }
+      greet();
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('FunctionDeclaration');
-    ctx.assertAstStructure('statements.0', {
-      type: 'FunctionDeclaration',
-      name: 'greet',
-      parameters: []
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("Hello, world!");
   });
   
-  test('Function Call', () => {
+  test('Function Call With Variables', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
       
-      let result = add(5, 3);
+      let x = 5;
+      let y = 3;
+      add(x, y);
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('CallExpression');
-    ctx.assertAstStructure('statements.1.initializer', {
-      type: 'CallExpression'
-    });
-    // Check that callee is the identifier 'add'
-    ctx.assertAstStructure('statements.1.initializer.callee', {
-      type: 'Identifier',
-      name: 'add'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(8);
   });
   
   test('Function Call No Arguments', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      def greet() {
-        return "Hello, world!";
+    ctx.evaluate(`
+      def getDefaultValue() {
+        return 42;
       }
       
-      let message = greet();
+      getDefaultValue();
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('CallExpression');
-    ctx.assertAstStructure('statements.1.initializer', {
-      type: 'CallExpression'
-    });
-    // Check that arguments is an empty array
-    ctx.assertAstStructure('statements.1.initializer', {
-      arguments: []
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(42);
   });
   
   test('Function Call With Expressions', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def multiply(a, b) {
         return a * b;
       }
       
-      let result = multiply(5 + 3, 10 / 2);
+      multiply(5 + 3, 10 / 2);
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('CallExpression');
-    // First argument should be an expression
-    ctx.assertAstStructure('statements.1.initializer.arguments.0', {
-      type: 'InfixExpression',
-      operator: '+'
-    });
-    // Second argument should be an expression
-    ctx.assertAstStructure('statements.1.initializer.arguments.1', {
-      type: 'InfixExpression',
-      operator: '/'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(40); // (5 + 3) * (10 / 2) = 8 * 5 = 40
   });
   
   test('Nested Function Calls', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
@@ -110,71 +79,52 @@ describe('Functions and Function Calls', () => {
         return a * b;
       }
       
-      let result = multiply(add(2, 3), 4);
+      multiply(add(2, 3), 4);
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('CallExpression');
-    // First argument should be a call expression
-    ctx.assertAstStructure('statements.2.initializer.arguments.0', {
-      type: 'CallExpression'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(20); // add(2, 3) = 5, multiply(5, 4) = 20
   });
   
-  test('Built-in Function Call', () => {
+  test('Built-in Function Call: console_put', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      let value = io_get("key");
-      console_put(value);
-      io_put("key", 42);
+    ctx.evaluate(`
+      console_put("Hello");
+      console_put("World");
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('CallExpression');
-    // Check io_get call
-    ctx.assertAstStructure('statements.0.initializer', {
-      type: 'CallExpression'
-    });
-    ctx.assertAstStructure('statements.0.initializer.callee', {
-      type: 'Identifier',
-      name: 'io_get'
-    });
-    // Check console_put call
-    ctx.assertAstStructure('statements.1.expression', {
-      type: 'CallExpression'
-    });
-    ctx.assertAstStructure('statements.1.expression.callee', {
-      type: 'Identifier',
-      name: 'console_put'
-    });
-    // Check io_put call
-    ctx.assertAstStructure('statements.2.expression', {
-      type: 'CallExpression'
-    });
-    ctx.assertAstStructure('statements.2.expression.callee', {
-      type: 'Identifier',
-      name: 'io_put'
-    });
+    ctx.assertEvalSuccess();
+    expect(ctx.consoleOutput).toContain("Hello");
+    expect(ctx.consoleOutput).toContain("World");
+  });
+  
+  test('Built-in Function Call: io_get and io_put', () => {
+    const ctx = new TestContext();
+    ctx.evaluate(`
+      io_put("key", 42);
+      let value = io_get("key");
+      value;
+    `, { /* empty initial json data */ });
+    
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(42);
+    ctx.assertJsonData("key", 42);
   });
   
   test('Function Call As Expression', () => {
     const ctx = new TestContext();
-    ctx.parse(`
-      let x = add(5, 3) * 2;
+    ctx.evaluate(`
+      def add(a, b) {
+        return a + b;
+      }
+      
+      add(5, 3) * 2;
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('CallExpression');
-    // The call expression should be the left operand of a multiplication
-    ctx.assertAstStructure('statements.0.initializer', {
-      type: 'InfixExpression',
-      operator: '*'
-    });
-    ctx.assertAstStructure('statements.0.initializer.left', {
-      type: 'CallExpression'
-    });
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(16); // add(5, 3) = 8, 8 * 2 = 16
   });
   
   test('Function With Return In If Statement', () => {
     const ctx = new TestContext();
-    ctx.parse(`
+    ctx.evaluate(`
       def max(a, b) {
         if (a > b) {
           return a;
@@ -182,10 +132,27 @@ describe('Functions and Function Calls', () => {
           return b;
         }
       }
+      
+      max(10, 5);
     `);
-    ctx.assertSuccess();
-    ctx.assertContainsNodeType('FunctionDeclaration');
-    ctx.assertContainsNodeType('IfStatement');
-    ctx.assertContainsNodeType('ReturnStatement');
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(10);
+  });
+  
+  test('Recursive Function', () => {
+    const ctx = new TestContext();
+    ctx.evaluate(`
+      def factorial(n) {
+        if (n <= 1) {
+          return 1;
+        } else {
+          return n * factorial(n - 1);
+        }
+      }
+      
+      factorial(5);
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(120); // 5! = 5 * 4 * 3 * 2 * 1 = 120
   });
 }); 
