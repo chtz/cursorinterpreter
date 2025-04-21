@@ -5,11 +5,11 @@
  * It's kept for development and troubleshooting purposes only.
  * 
  * Usage: 
- * 1. Run with Node.js: node src/debug_api.js
+ * 1. Run with Node.js: node src/debug/debug_api.js
  * 2. Check the console output for detailed information about API behavior
  */
 
-import { Interpreter } from './interpreter/index.js';
+import { Interpreter } from '../interpreter/index.js';
 
 function debugApiTest() {
   console.log('Debugging API test with detailed error reporting\n');

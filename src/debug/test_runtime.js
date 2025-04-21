@@ -5,11 +5,11 @@
  * It's kept for development and troubleshooting purposes only.
  * 
  * Usage: 
- * 1. Run with Node.js: node src/test_runtime.js
+ * 1. Run with Node.js: node src/debug/test_runtime.js
  * 2. Check the console output for detailed information about EvaluationContext behavior
  */
 
-import { EvaluationContext } from './interpreter/runtime.js';
+import { EvaluationContext } from '../interpreter/runtime.js';
 
 // Test EvaluationContext
 function testEvaluationContext() {

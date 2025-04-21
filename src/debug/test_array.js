@@ -5,11 +5,11 @@
  * It's kept for development and troubleshooting purposes only.
  * 
  * Usage: 
- * 1. Run with Node.js: node src/test_array.js
+ * 1. Run with Node.js: node src/debug/test_array.js
  * 2. Check the console output for detailed information about array operations
  */
 
-import { Interpreter } from './interpreter/index.js';
+import { Interpreter } from '../interpreter/index.js';
 
 // Test array processing with library functions
 function testArrayProcessing() {

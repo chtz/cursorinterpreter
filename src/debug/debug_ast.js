@@ -5,11 +5,11 @@
  * It's kept for development and troubleshooting purposes only.
  * 
  * Usage: 
- * 1. Run with Node.js: node src/debug_ast.js
+ * 1. Run with Node.js: node src/debug/debug_ast.js
  * 2. Check the console output for detailed information about AST structure and evaluation
  */
 
-import { Interpreter } from './interpreter/index.js';
+import { Interpreter } from '../interpreter/index.js';
 
 // Create a simple script for testing
 const testScript = `

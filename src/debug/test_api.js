@@ -5,11 +5,11 @@
  * It's kept for development and troubleshooting purposes only.
  * 
  * Usage: 
- * 1. Run with Node.js: node src/test_api.js
+ * 1. Run with Node.js: node src/debug/test_api.js
  * 2. Check the console output for detailed information about API behavior
  */
 
-import { Interpreter } from './interpreter/index.js';
+import { Interpreter } from '../interpreter/index.js';
 
 function testApiFunction() {
   const interpreter = new Interpreter();
@@ -43,7 +43,10 @@ function testApiFunction() {
   interpreter.parse(`
     // Make API calls
     let userData = api_call("users");
-    let itemData = api_call("items", { filter: "active" });
+    
+    // Define filter variable
+    let filter = "active";
+    let itemData = api_call("items", { filter: filter });
     
     // Log results
     console_put("First user: " + userData.users[0]);

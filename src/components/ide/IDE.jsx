@@ -32,8 +32,21 @@ io_put('value1', b);
 console_put("new:");
 console_put(b);`;
 
+const SIMPLE_EXAMPLE = `// Simple example
+let message = "Hello, World!";
+console_put(message);
+
+let value = io_get('number');
+let doubled = value * 2;
+console_put("Doubled value: " + doubled);
+io_put('result', doubled);`;
+
 const DEFAULT_JSON_DATA = `{
   "value1": 5
+}`;
+
+const SIMPLE_JSON_DATA = `{
+  "number": 42
 }`;
 
 function IDE() {
@@ -95,12 +108,21 @@ function IDE() {
               errorMessages
             );
           }
-        } catch (jsonError) {
-          setOutput(prevOutput => 
-            prevOutput + 
-            `$ JSON parsing error: ${jsonError.message}\n` +
-            '$ Please check your JSON data and try again.'
-          );
+        } catch (error) {
+          // Differentiate between JSON parsing errors and other errors
+          if (error instanceof SyntaxError && error.message.includes('JSON')) {
+            setOutput(prevOutput => 
+              prevOutput + 
+              `$ JSON parsing error: ${error.message}\n` +
+              '$ Please check your JSON data and try again.'
+            );
+          } else {
+            setOutput(prevOutput => 
+              prevOutput + 
+              `$ Unexpected error: ${error.message}\n` +
+              '$ Please check your code and try again.'
+            );
+          }
         }
       } else {
         // Show parsing errors
@@ -115,11 +137,37 @@ function IDE() {
     }
   };
   
+  const loadSimpleExample = () => {
+    setSource(SIMPLE_EXAMPLE);
+    setJsonData(SIMPLE_JSON_DATA);
+    setOutput('$ Loaded simple example. Click "Run" to execute it.');
+  };
+  
+  const loadAdvancedExample = () => {
+    setSource(DEFAULT_SOURCE);
+    setJsonData(DEFAULT_JSON_DATA);
+    setOutput('$ Loaded advanced example. Click "Run" to execute it.');
+  };
+  
   return (
     <div className="flex flex-col h-[calc(100vh-200px)] gap-4">
       <div className="flex flex-grow gap-4 min-h-0">
         {/* Left side: Source Editor (takes 2/3 of the width) */}
-        <div className="w-2/3 min-h-0">
+        <div className="w-2/3 min-h-0 flex flex-col">
+          <div className="flex mb-2 gap-2">
+            <button 
+              onClick={loadSimpleExample}
+              className="px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+            >
+              Load Simple Example
+            </button>
+            <button 
+              onClick={loadAdvancedExample}
+              className="px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+            >
+              Load Advanced Example
+            </button>
+          </div>
           <SourceEditor 
             source={source} 
             onSourceChange={setSource} 

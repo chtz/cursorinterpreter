@@ -3,9 +3,28 @@ import { Parser } from './parser.js';
 import { EvaluationContext, RuntimeError, ReturnValue } from './runtime.js';
 
 /**
- * Main interpreter class that handles the parsing and evaluation processes
+ * Main Interpreter class that orchestrates lexing, parsing, and evaluation of code.
+ * This is the primary entry point for using the interpreter.
  */
 export class Interpreter {
+  /**
+   * Creates a new Interpreter instance with fresh context.
+   * The interpreter provides a clean environment for parsing and evaluating code.
+   * Each parse/evaluate cycle uses its own internal state to prevent side effects
+   * between different code executions.
+   * 
+   * @example
+   * ```javascript
+   * const interpreter = new Interpreter();
+   * const parseResult = interpreter.parse('let x = 42;');
+   * if (parseResult.success) {
+   *   const jsonData = {};
+   *   const consoleOutput = [];
+   *   const evalResult = interpreter.evaluate(jsonData, consoleOutput);
+   *   console.log(evalResult);
+   * }
+   * ```
+   */
   constructor() {
     this.ast = null;
     this.errors = [];
