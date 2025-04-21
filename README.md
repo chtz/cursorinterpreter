@@ -13,6 +13,7 @@ This project is an interactive code interpreter environment built with React. It
 - **React Router**: Client-side routing for single page applications
 - **Tailwind CSS**: Utility-first CSS framework for rapid UI development
 - **ESLint**: Code linting and style enforcement
+- **Jest**: JavaScript testing framework for unit testing the custom interpreter
 
 ## Directory Structure
 
@@ -193,6 +194,7 @@ console_put(b);
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
 - `npm run lint` - Run ESLint to check code quality
+- `npm run test` - Run Jest tests for the interpreter
 
 ## Getting Started
 
