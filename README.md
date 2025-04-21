@@ -184,34 +184,75 @@ if (evalResult.success) {
 
 ### Sample Program
 
-This program demonstrates core language features including variables, functions, conditionals, loops, and I/O:
+This program demonstrates core language features including variables, functions, conditionals, loops, arrays, and I/O:
 
 ```
-def foo(x) {
-  if (x > 0) {
-    let y = x;
-    let i = 0;
-    while (i < 2) {
-      y = y * 2;
-      i = i + 1;
-    }
-    return y;
+// Comprehensive example showcasing language features
+def calculate(x, y) {
+  // Function with parameters and return value
+  let result = 0;
+  
+  // If-else control structure
+  if (x > y) {
+    result = x * 2 - y;
+  } else if (x < y) {
+    result = y * 2 - x;
+  } else {
+    result = x + y;
   }
-  else {
-    return x * -2;
+  
+  // While loop
+  let i = 0;
+  while (i < 3) {
+    result = result + i;
+    i = i + 1;
   }
+  
+  return result;
 }
 
-let a = io_get('value1');
-let msg = "old:";
-console_put(msg);
-console_put(a);
+// Variable declaration and assignment
+let userName = io_get("user");
+let numbers = [10, 20, 30, 40, 50];
 
-let b = foo(a);
+// Data retrieval from JSON
+let isActive = io_get("active");
+let userScore = io_get("score");
 
-io_put('value1', b); 
-console_put("new:");
-console_put(b);
+// Array access with indexing
+let selectedNumber = numbers[2];
+
+// Function call
+let calculatedValue = calculate(selectedNumber, 25);
+
+// String concatenation
+console_put("Hello, " + userName + "!");
+console_put("Selected number: " + selectedNumber);
+console_put("Calculation result: " + calculatedValue);
+
+// Boolean logic
+if (isActive && userScore > 30) {
+  console_put("User has high score and is active!");
+} else if (!isActive || userScore < 10) {
+  console_put("User needs to improve activity or score.");
+} else {
+  console_put("User is doing fine.");
+}
+
+// Store results back to JSON
+io_put("result", calculatedValue);
+io_put("selectedNumber", selectedNumber);
+
+// Return the final result
+calculatedValue;
+```
+
+For beginners, here's a simple "Hello, World!" example:
+
+```
+// Simple "Hello, World!" example
+let message = "Hello, World!";
+console_put(message);
 ```
 
 ## Web IDE

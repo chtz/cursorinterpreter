@@ -32,21 +32,79 @@ io_put('value1', b);
 console_put("new:");
 console_put(b);`;
 
-const SIMPLE_EXAMPLE = `// Simple example
+const SIMPLE_EXAMPLE = `// Simple "Hello, World!" example
 let message = "Hello, World!";
-console_put(message);
-
-let value = io_get('number');
-let doubled = value * 2;
-console_put("Doubled value: " + doubled);
-io_put('result', doubled);`;
-
-const DEFAULT_JSON_DATA = `{
-  "value1": 5
-}`;
+console_put(message);`;
 
 const SIMPLE_JSON_DATA = `{
-  "number": 42
+  "user": "Learner"
+}`;
+
+const ADVANCED_EXAMPLE = `// Advanced example showcasing language features
+def calculate(x, y) {
+  // Function with parameters and return value
+  let result = 0;
+  
+  // If-else control structure
+  if (x > y) {
+    result = x * 2 - y;
+  } else if (x < y) {
+    result = y * 2 - x;
+  } else {
+    result = x + y;
+  }
+  
+  // While loop
+  let i = 0;
+  while (i < 3) {
+    result = result + i;
+    i = i + 1;
+  }
+  
+  return result;
+}
+
+// Variable declaration and assignment
+let userName = io_get("user");
+let numbers = [10, 20, 30, 40, 50];
+
+// Retrieving data from JSON
+let isActive = io_get("active");
+let userScore = io_get("score");
+
+// Array access with indexing
+let selectedNumber = numbers[2];
+
+// Function call
+let calculatedValue = calculate(selectedNumber, 25);
+
+// String concatenation
+console_put("Hello, " + userName + "!");
+console_put("Selected number: " + selectedNumber);
+console_put("Calculation result: " + calculatedValue);
+
+// Boolean logic
+if (isActive && userScore > 30) {
+  console_put("User has high score and is active!");
+} else if (!isActive || userScore < 10) {
+  console_put("User needs to improve activity or score.");
+} else {
+  console_put("User is doing fine.");
+}
+
+// Store results back to JSON
+io_put("result", calculatedValue);
+io_put("selectedNumber", selectedNumber);
+
+// Return the final result
+calculatedValue;`;
+
+const DEFAULT_JSON_DATA = `{
+  "user": "Developer",
+  "active": true,
+  "score": 45,
+  "theme": "dark",
+  "notifications": true
 }`;
 
 function IDE() {
@@ -144,7 +202,7 @@ function IDE() {
   };
   
   const loadAdvancedExample = () => {
-    setSource(DEFAULT_SOURCE);
+    setSource(ADVANCED_EXAMPLE);
     setJsonData(DEFAULT_JSON_DATA);
     setOutput('$ Loaded advanced example. Click "Run" to execute it.');
   };
