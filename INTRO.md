@@ -2639,26 +2639,18 @@ These advanced topics represent potential future directions for the Cursor Inter
 
 ### Simple Programs
 
-The Cursor Interpreter is designed to be simple and easy to understand. Let's look at some simple programs to see how they work:
+Let's start with a simple "Hello, World!" program to demonstrate the basic syntax of our language:
 
 ```
-// Define a function to calculate the factorial
-def factorial(n) {
-  if (n <= 1) {
-    return 1;
-  } else {
-    return n * factorial(n - 1);
-  }
-}
-
-// Calculate factorial of 5 and display result
-let result = factorial(5);
-console_put("Factorial of 5 is: " + result);
+// A simple hello world program
+console_put("Hello, World!");
 ```
+
+This program uses the built-in `console_put` function to output a string to the console. The program consists of a single statement that calls the function with a string literal argument.
 
 ### Recursive Functions
 
-The Cursor Interpreter supports recursive functions, which is a common feature in many programming languages.
+Our language supports recursive functions, which are essential for many algorithms:
 
 ```
 // Define a function to calculate the factorial
@@ -2674,63 +2666,145 @@ def factorial(n) {
 let result = factorial(5);
 console_put("Factorial of 5 is: " + result);
 ```
+
+This program defines a recursive function `factorial` that calculates the factorial of a number. The function demonstrates control flow with an if/else statement and recursive function calls.
 
 ### Working with Data Structures
 
-The Cursor Interpreter supports arrays and object indexing, which are common in many programming languages.
+Our language includes support for arrays and JSON data manipulation:
 
 ```
-// Define a function to calculate the factorial
-def factorial(n) {
-  if (n <= 1) {
-    return 1;
-  } else {
-    return n * factorial(n - 1);
-  }
+// Create and manipulate an array
+let numbers = [1, 2, 3, 4, 5];
+let sum = 0;
+
+// Calculate the sum of the array elements
+let i = 0;
+while (i < 5) {
+  sum = sum + numbers[i];
+  i = i + 1;
 }
 
-// Calculate factorial of 5 and display result
-let result = factorial(5);
-console_put("Factorial of 5 is: " + result);
+console_put("The sum is: " + sum);
+
+// Store the result in JSON
+io_put("sum", sum);
+io_put("average", sum / 5);
+
+// Retrieve stored data
+let avg = io_get("average");
+console_put("The average is: " + avg);
 ```
+
+This example demonstrates array creation, indexing, iteration with a while loop, and using the built-in `io_put` and `io_get` functions to work with JSON data.
 
 ### Interactive I/O Examples
 
-The Cursor Interpreter supports built-in I/O functions for console output and JSON data manipulation.
+The following example shows how to interact with external JSON data:
 
 ```
-// Define a function to calculate the factorial
-def factorial(n) {
-  if (n <= 1) {
-    return 1;
+// Read input data
+let name = io_get("username");
+let age = io_get("age");
+
+// Validate and process data
+if (name == null) {
+  console_put("Error: Username is required");
+} else {
+  // Generate personalized greeting
+  let greeting = "Hello, " + name;
+  
+  if (age != null && age >= 18) {
+    greeting = greeting + "! You are an adult.";
   } else {
-    return n * factorial(n - 1);
+    greeting = greeting + "! You are a minor.";
   }
+  
+  // Output results
+  console_put(greeting);
+  io_put("greeting", greeting);
 }
-
-// Calculate factorial of 5 and display result
-let result = factorial(5);
-console_put("Factorial of 5 is: " + result);
 ```
+
+This program uses `io_get` to retrieve input data, processes it with conditional logic, and then uses `console_put` and `io_put` for output.
 
 ### Building a Complete Application
 
-The Cursor Interpreter can be used to build complete applications.
+Here's a more complete example that combines multiple language features to build a simple task tracker:
 
 ```
-// Define a function to calculate the factorial
-def factorial(n) {
-  if (n <= 1) {
-    return 1;
-  } else {
-    return n * factorial(n - 1);
+// Task Tracker Application
+
+// Initialize or retrieve the task list
+let tasks = io_get("tasks");
+if (tasks == null) {
+  tasks = [];
+  io_put("tasks", tasks);
+}
+
+// Function to add a new task
+def addTask(description, priority) {
+  let task = [description, priority, false]; // [description, priority, completed]
+  tasks[tasks.length] = task;
+  io_put("tasks", tasks);
+  return task;
+}
+
+// Function to complete a task
+def completeTask(index) {
+  if (index >= 0 && index < tasks.length) {
+    tasks[index][2] = true;
+    io_put("tasks", tasks);
+    return true;
+  }
+  return false;
+}
+
+// Function to list all tasks
+def listTasks() {
+  if (tasks.length == 0) {
+    console_put("No tasks found.");
+    return;
+  }
+  
+  console_put("Task List:");
+  
+  let i = 0;
+  while (i < tasks.length) {
+    let task = tasks[i];
+    let status = task[2] ? "✓" : "□";
+    console_put(i + ": " + status + " " + task[0] + " (Priority: " + task[1] + ")");
+    i = i + 1;
   }
 }
 
-// Calculate factorial of 5 and display result
-let result = factorial(5);
-console_put("Factorial of 5 is: " + result);
+// Process command from input
+let command = io_get("command");
+let taskDesc = io_get("description");
+let taskPriority = io_get("priority");
+let taskIndex = io_get("index");
+
+if (command == "add" && taskDesc != null) {
+  if (taskPriority == null) {
+    taskPriority = "medium";
+  }
+  addTask(taskDesc, taskPriority);
+  console_put("Task added successfully!");
+} else if (command == "complete" && taskIndex != null) {
+  let success = completeTask(taskIndex);
+  if (success) {
+    console_put("Task marked as complete!");
+  } else {
+    console_put("Invalid task index!");
+  }
+} else if (command == "list") {
+  listTasks();
+} else {
+  console_put("Unknown command or missing parameters!");
+}
 ```
+
+This example demonstrates a complete application with functions, arrays, conditionals, loops, and I/O operations. It implements a simple task tracker that can add tasks, mark them as complete, and list all tasks.
 
 ## References and Further Reading
 
