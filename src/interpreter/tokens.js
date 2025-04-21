@@ -52,6 +52,13 @@ export const TokenType = {
   RPAREN: ')',
   LBRACE: '{',
   RBRACE: '}',
+  
+  // Member access
+  DOT: '.',
+  
+  // Array access
+  LBRACKET: '[',
+  RBRACKET: ']',
 };
 
 /**

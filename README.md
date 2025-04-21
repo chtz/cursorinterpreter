@@ -96,6 +96,13 @@ Primary             ::= Literal
                       | Identifier
                       | FunctionCall
                       | "(" Expression ")"
+                      | MemberExpression
+                      | ArrayLiteral
+                      
+MemberExpression    ::= Primary "." Identifier
+                      | Primary "[" Expression "]"
+
+ArrayLiteral        ::= "[" (Expression ("," Expression)*)? "]"
 
 /* Function call */
 FunctionCall        ::= Identifier "(" ArgumentList? ")"

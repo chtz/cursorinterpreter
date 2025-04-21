@@ -581,6 +581,63 @@ export class CallExpression extends Node {
   }
 }
 
+export class MemberExpression extends Node {
+  constructor(object, property, computed = false) {
+    super();
+    this.object = object;       // The object being accessed
+    this.property = property;   // The property being accessed
+    this.computed = computed;   // Whether this is computed access e.g. obj[expr] (true) or obj.prop (false)
+  }
+  
+  toJSON() {
+    return {
+      type: 'MemberExpression',
+      position: this.position,
+      object: this.object ? this.object.toJSON() : null,
+      property: this.property ? this.property.toJSON() : null,
+      computed: this.computed
+    };
+  }
+  
+  evaluate(context) {
+    const object = this.object.evaluate(context);
+    let property;
+    
+    if (this.computed) {
+      // Computed member access: obj[expr]
+      property = this.property.evaluate(context);
+    } else {
+      // Static member access: obj.prop
+      property = this.property.name;
+    }
+    
+    if (object === null || object === undefined) {
+      throw new Error('Cannot access property of null or undefined');
+    }
+    
+    return object[property];
+  }
+}
+
+export class ArrayLiteral extends Node {
+  constructor(elements = []) {
+    super();
+    this.elements = elements;
+  }
+  
+  toJSON() {
+    return {
+      type: 'ArrayLiteral',
+      position: this.position,
+      elements: this.elements.map(e => e ? e.toJSON() : null)
+    };
+  }
+  
+  evaluate(context) {
+    return this.elements.map(element => element.evaluate(context));
+  }
+}
+
 // Helper function to determine if a value is truthy
 function isTruthy(value) {
   if (value === null) return false;

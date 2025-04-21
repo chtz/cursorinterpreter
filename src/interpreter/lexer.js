@@ -72,7 +72,12 @@ export class Lexer {
         token = new Token(TokenType.ASTERISK, this.ch, this.line, this.column);
         break;
       case '/':
-        token = new Token(TokenType.SLASH, this.ch, this.line, this.column);
+        if (this.peekChar() === '/' || this.peekChar() === '*') {
+          this.skipComments();
+          return this.nextToken();
+        } else {
+          token = new Token(TokenType.SLASH, this.ch, this.line, this.column);
+        }
         break;
       case '%':
         token = new Token(TokenType.PERCENT, this.ch, this.line, this.column);
@@ -133,6 +138,9 @@ export class Lexer {
       case ';':
         token = new Token(TokenType.SEMICOLON, this.ch, this.line, this.column);
         break;
+      case '.':
+        token = new Token(TokenType.DOT, this.ch, this.line, this.column);
+        break;
       case '(':
         token = new Token(TokenType.LPAREN, this.ch, this.line, this.column);
         break;
@@ -153,6 +161,12 @@ export class Lexer {
         break;
       case '':
         token = new Token(TokenType.EOF, '', this.line, this.column);
+        break;
+      case '[':
+        token = new Token(TokenType.LBRACKET, this.ch, this.line, this.column);
+        break;
+      case ']':
+        token = new Token(TokenType.RBRACKET, this.ch, this.line, this.column);
         break;
       default:
         if (this.isLetter(this.ch)) {

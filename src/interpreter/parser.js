@@ -14,6 +14,7 @@ const PRECEDENCE = {
   PRODUCT: 7, // * / %
   PREFIX: 8,  // -x !x
   CALL: 9,    // myFunction(x)
+  MEMBER: 10, // obj.property
 };
 
 // Mapping of token types to their respective precedence
@@ -32,6 +33,8 @@ const PRECEDENCES = {
   [TokenType.SLASH]: PRECEDENCE.PRODUCT,
   [TokenType.PERCENT]: PRECEDENCE.PRODUCT,
   [TokenType.LPAREN]: PRECEDENCE.CALL,
+  [TokenType.DOT]: PRECEDENCE.MEMBER,
+  [TokenType.LBRACKET]: PRECEDENCE.MEMBER,
 };
 
 /**
@@ -64,6 +67,7 @@ export class Parser {
     this.registerPrefix(TokenType.LPAREN, this.parseGroupedExpression.bind(this));
     this.registerPrefix(TokenType.MINUS, this.parsePrefixExpression.bind(this));
     this.registerPrefix(TokenType.NOT, this.parsePrefixExpression.bind(this));
+    this.registerPrefix(TokenType.LBRACKET, this.parseArrayLiteral.bind(this));
     
     // Register infix parsers
     this.registerInfix(TokenType.PLUS, this.parseInfixExpression.bind(this));
@@ -80,6 +84,8 @@ export class Parser {
     this.registerInfix(TokenType.AND, this.parseInfixExpression.bind(this));
     this.registerInfix(TokenType.OR, this.parseInfixExpression.bind(this));
     this.registerInfix(TokenType.LPAREN, this.parseCallExpression.bind(this));
+    this.registerInfix(TokenType.DOT, this.parseMemberExpression.bind(this));
+    this.registerInfix(TokenType.LBRACKET, this.parseIndexExpression.bind(this));
   }
   
   /**
@@ -655,30 +661,111 @@ export class Parser {
    * Parse function call arguments
    */
   parseCallArguments() {
-    const args = [];
+    return this.parseExpressionList(TokenType.RPAREN);
+  }
+  
+  /**
+   * Parse a member expression (object.property)
+   */
+  parseMemberExpression(object) {
+    const memberExp = new AST.MemberExpression(
+      object,
+      null, // property will be set below
+      false // not computed
+    );
+    memberExp.position = { line: this.currentToken.line, column: this.currentToken.column };
     
-    // Empty argument list
-    if (this.peekTokenIs(TokenType.RPAREN)) {
-      this.nextToken();
-      return args;
+    // Skip the dot
+    this.nextToken();
+    
+    // Check if the property name is an identifier
+    if (!this.currentTokenIs(TokenType.IDENTIFIER)) {
+      this.errors.push({
+        message: `Expected property name after dot operator, got ${this.currentToken.type}`,
+        line: this.currentToken?.line,
+        column: this.currentToken?.column
+      });
+      return null;
     }
     
-    this.nextToken(); // Skip the '('
+    // Set the property name as an identifier
+    memberExp.property = this.parseIdentifier();
     
-    // First argument
-    args.push(this.parseExpression(PRECEDENCE.LOWEST));
+    return memberExp;
+  }
+  
+  /**
+   * Parse an index expression (object[index])
+   */
+  parseIndexExpression(object) {
+    const indexExp = new AST.MemberExpression(
+      object,
+      null, // property will be set below
+      true  // computed access
+    );
+    indexExp.position = { line: this.currentToken.line, column: this.currentToken.column };
     
-    // Subsequent arguments
+    // Skip the opening bracket
+    this.nextToken();
+    
+    // Parse the index expression
+    indexExp.property = this.parseExpression(PRECEDENCE.LOWEST);
+    
+    // Expect closing bracket
+    if (!this.expectPeek(TokenType.RBRACKET)) {
+      this.errors.push({
+        message: "Expected ']' after index expression",
+        line: this.peekToken?.line,
+        column: this.peekToken?.column
+      });
+      return null;
+    }
+    
+    return indexExp;
+  }
+  
+  /**
+   * Parse an array literal
+   */
+  parseArrayLiteral() {
+    const array = new AST.ArrayLiteral();
+    array.position = { line: this.currentToken.line, column: this.currentToken.column };
+    
+    array.elements = this.parseExpressionList(TokenType.RBRACKET);
+    
+    return array;
+  }
+  
+  /**
+   * Parse a list of expressions
+   */
+  parseExpressionList(endToken) {
+    const expressions = [];
+    
+    // Handle empty list
+    if (this.peekTokenIs(endToken)) {
+      this.nextToken();
+      return expressions;
+    }
+    
+    // Skip opening delimiter
+    this.nextToken();
+    
+    // Parse first expression
+    expressions.push(this.parseExpression(PRECEDENCE.LOWEST));
+    
+    // Parse remaining expressions
     while (this.peekTokenIs(TokenType.COMMA)) {
       this.nextToken(); // Skip comma
-      this.nextToken(); // Move to next argument
-      args.push(this.parseExpression(PRECEDENCE.LOWEST));
+      this.nextToken(); // Move to next expression
+      expressions.push(this.parseExpression(PRECEDENCE.LOWEST));
     }
     
-    if (!this.expectPeek(TokenType.RPAREN)) {
-      return [];
+    // Expect closing delimiter
+    if (!this.expectPeek(endToken)) {
+      return null;
     }
     
-    return args;
+    return expressions;
   }
 } 
