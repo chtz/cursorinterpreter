@@ -20,7 +20,7 @@ const testScript = `
 `;
 
 // Debug the AST and evaluation
-function debugAST() {
+async function debugAST() {
   console.log('Debugging AST structure and evaluation...\n');
   
   // Create a fresh interpreter
@@ -88,7 +88,7 @@ function debugAST() {
     // Manually invoke the evaluate function on the AST statement directly
     console.log('\n   Manually evaluating first statement:');
     try {
-      const firstResult = interpreter.ast.statements[0].evaluate(interpreter.context);
+      const firstResult = await ast.statements[0].evaluate(interpreter.context);
       console.log('   First statement evaluated to:', firstResult);
     } catch (err) {
       console.error('   Error evaluating first statement:', err.message);
@@ -98,7 +98,7 @@ function debugAST() {
     console.log('\n   Manually evaluating CallExpression:');
     try {
       // Get the third statement (first console_put)
-      const callExpr = interpreter.ast.statements[2].expression;
+      const callExpr = ast.statements[2].expression;
       console.log('   CallExpression node:', callExpr);
       console.log('   Callee name:', callExpr.callee.name);
       console.log('   Context functions:', Object.keys(interpreter.context.functions));
@@ -123,7 +123,7 @@ function debugAST() {
     
     // Now try the full evaluation again
     console.log('\n   Running full evaluation:');
-    const evalResult = interpreter.evaluate(jsonData, consoleOutput);
+    const evalResult = await interpreter.evaluate(jsonData, consoleOutput);
     
     console.log('   Evaluation result:', evalResult);
     console.log('   Console output:', consoleOutput);
@@ -144,4 +144,6 @@ function debugAST() {
 }
 
 // Run the debug function
-debugAST(); 
+debugAST().catch(err => {
+  console.error('Error in debug function:', err);
+}); 

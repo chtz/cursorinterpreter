@@ -13,7 +13,7 @@ import { Interpreter } from '../interpreter/index.js';
 import fs from 'fs/promises';
 
 // Test io_put behavior
-function testIoPut() {
+async function testIoPut() {
   console.log('Testing io_put functionality...');
   
   const interpreter = new Interpreter();
@@ -37,7 +37,7 @@ function testIoPut() {
   `);
   
   const consoleOutput = [];
-  const result = interpreter.evaluate(jsonData, consoleOutput);
+  const result = await interpreter.evaluate(jsonData, consoleOutput);
   
   console.log('Interpreter result:', result);
   console.log('JSON data:', jsonData);
@@ -130,5 +130,20 @@ async function runTest() {
   }
 }
 
-// Run the test
-runTest(); 
+// Run both tests
+async function runTests() {
+  try {
+    // First run the basic io_put test
+    await testIoPut();
+    
+    console.log('\n===================================\n');
+    
+    // Then run the file IO test
+    await runTest();
+  } catch (err) {
+    console.error('Error in tests:', err);
+  }
+}
+
+// Run the tests
+runTests(); 

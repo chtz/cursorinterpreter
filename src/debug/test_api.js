@@ -12,51 +12,28 @@
 import { Interpreter } from '../interpreter/index.js';
 
 function testApiFunction() {
+  console.log('Testing API function implementation...');
+  
   const interpreter = new Interpreter();
   
   // Create a mock web API function
   const apiCalls = [];
-  interpreter.registerFunction('api_call', (...args) => {
-    console.log('DEBUG: api_call called with args:', args);
-    
-    // Handle the case where arguments are wrapped in an array
-    const flatArgs = Array.isArray(args[0]) ? args[0] : args;
-    
-    // Extract arguments
-    let endpoint = flatArgs[0];
-    let data = flatArgs[1];
-    
-    console.log('DEBUG: endpoint =', endpoint, 'data =', data);
-    
-    // Record the call for testing
-    apiCalls.push({ endpoint, data: data || {} });
-    
-    // Simulate response based on endpoint
-    if (endpoint === 'users') {
-      return { success: true, users: ['Alice', 'Bob', 'Charlie'] };
-    } else if (endpoint === 'items') {
-      return { success: true, items: [1, 2, 3, 4] };
-    } else {
-      return { success: false, error: 'Invalid endpoint' };
-    }
+  interpreter.registerFunction('api_call', (method, data) => {
+    apiCalls.push({ method, data });
+    return { success: true, data: [1, 2, 3] };
   });
   
-  // Parse the script
-  const parseResult = interpreter.parse(`
-    // Make API calls
-    let userData = api_call("users");
-    
-    // Define filter variable
-    let filter = "active";
-    let itemData = api_call("items", filter);
-    
-    // Log results
-    console_put("First user: " + userData.users[0]);
-    console_put("Items count: " + itemData.items.length);
-    
-    // Return success flag
-    userData.success;
-  `);
+  // Test program that calls the API function
+  const program = `
+    let result = api_call("get_data", { userId: 123 });
+    console_put("API result: " + result.success);
+    result.data[1]; // Should be 2
+  `;
+  
+  console.log('\nParsing program:', program);
+  
+  // Parse the program
+  const parseResult = interpreter.parse(program);
   
   console.log('\nParsing result:', parseResult.success ? 'Success' : 'Failed');
   if (!parseResult.success) {
@@ -68,11 +45,18 @@ function testApiFunction() {
   
   // Run the evaluation
   const consoleOutput = [];
-  const result = interpreter.evaluate({}, consoleOutput);
   
-  console.log('\nEvaluation result:', result);
-  console.log('Console output:', consoleOutput);
-  console.log('API calls made:', apiCalls);
+  // Make this function async so we can await the evaluation
+  return (async () => {
+    const result = await interpreter.evaluate({}, consoleOutput);
+    
+    console.log('\nEvaluation result:', result);
+    console.log('Console output:', consoleOutput);
+    console.log('API calls made:', apiCalls);
+  })();
 }
 
-testApiFunction(); 
+// Call the function and handle the Promise it returns
+testApiFunction().catch(error => {
+  console.error('Error in test:', error);
+}); 

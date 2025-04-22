@@ -112,7 +112,7 @@ function IDE() {
   const [jsonData, setJsonData] = useState(DEFAULT_JSON_DATA);
   const [output, setOutput] = useState('');
   
-  const handleRun = () => {
+  const handleRun = async () => {
     try {
       // Start with a fresh console output
       setOutput('$ Parsing program...\n');
@@ -135,7 +135,8 @@ function IDE() {
           
           // Execute the program
           setOutput('$ Executing program...\n');
-          const evalResult = interpreter.evaluate(parsedJsonData, consoleOutput);
+          // await the evaluation since it's now async
+          const evalResult = await interpreter.evaluate(parsedJsonData, consoleOutput);
           
           if (evalResult.success) {
             // Format the updated JSON

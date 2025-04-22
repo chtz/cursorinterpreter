@@ -169,8 +169,8 @@ if (!parseResult.success) {
 const jsonData = { /* initial data */ };
 const consoleOutput = [];
 
-// Evaluate the code
-const evalResult = interpreter.evaluate(jsonData, consoleOutput);
+// Evaluate the code - note that evaluate is async and requires await
+const evalResult = await interpreter.evaluate(jsonData, consoleOutput);
 
 // Check results
 if (evalResult.success) {
@@ -181,6 +181,22 @@ if (evalResult.success) {
   console.error('Evaluation errors:', evalResult.errors);
 }
 ```
+
+### Advanced Features
+
+The interpreter supports asynchronous library functions that can interact with external resources. You can register async functions using the third parameter in `registerFunction`:
+
+```javascript
+// Register an async function for file operations, database calls, etc.
+interpreter.registerFunction('fetchData', async (url) => {
+  // Fetch data from an external source
+  const response = await fetch(url);
+  const data = await response.json();
+  return data;
+}, true); // The third parameter marks this as an async function
+```
+
+When using async library functions, always remember that `evaluate` is asynchronous and must be awaited.
 
 ### Sample Program
 

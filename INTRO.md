@@ -2030,7 +2030,7 @@ export class Interpreter {
   }
   
   // Evaluate a parsed program
-  evaluate(jsonData = {}, consoleOutput = []) {
+  async evaluate(jsonData = {}, consoleOutput = []) {
     // Check if we have a parsed AST
     if (!this.ast) {
       return {
@@ -2151,7 +2151,7 @@ Once a program is parsed, it can be evaluated through the `evaluate` method:
 const jsonData = { value: 42 };
 const consoleOutput = [];
 
-const evalResult = interpreter.evaluate(jsonData, consoleOutput);
+const evalResult = await interpreter.evaluate(jsonData, consoleOutput);
 
 if (evalResult.success) {
   console.log('Evaluation successful!');
@@ -2304,7 +2304,7 @@ Our interpreter is particularly well-suited for web applications, as demonstrate
 
 ```javascript
 // Excerpt from src/components/ide/IDE.jsx
-const handleRun = () => {
+const handleRun = async () => {
   try {
     // Start with a fresh console output
     setOutput('$ Parsing program...\n');
@@ -2327,7 +2327,7 @@ const handleRun = () => {
         
         // Execute the program
         setOutput(prevOutput => prevOutput + '$ Executing program...\n');
-        const evalResult = interpreter.evaluate(parsedJsonData, consoleOutput);
+        const evalResult = await interpreter.evaluate(parsedJsonData, consoleOutput);
         
         if (evalResult.success) {
           // Format the updated JSON
