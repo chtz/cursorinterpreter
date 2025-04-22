@@ -12,9 +12,10 @@ export class ReturnValue {
 
 // Built-in library function type
 export class LibraryFunction {
-  constructor(name, jsFunction) {
+  constructor(name, jsFunction, isAsync = false) {
     this.name = name;
     this.implementation = jsFunction;
+    this.isAsync = isAsync;
   }
 }
 
@@ -82,8 +83,8 @@ export class Environment {
   }
 
   // Register a library function
-  registerLibraryFunction(name, implementation) {
-    const libraryFunction = new LibraryFunction(name, implementation);
+  registerLibraryFunction(name, implementation, isAsync = false) {
+    const libraryFunction = new LibraryFunction(name, implementation, isAsync);
     this.libraryFunctions.set(name, libraryFunction);
     return libraryFunction;
   }
@@ -111,6 +112,8 @@ export class EvaluationContext {
     this.consoleOutput = consoleOutput;
     // Library functions (built-in and user-registered)
     this.functions = {};
+    // Track which functions are async
+    this.asyncFunctions = new Set();
     // Create environment for scoped variables
     this.environment = new Environment();
   }
@@ -147,16 +150,26 @@ export class EvaluationContext {
       return this.variables[name];
     }
     
-    // Then check environment
-    try {
-      return this.environment.get(name);
-    } catch (e) {
-      // Finally check functions (for function calls)
-      if (name in this.functions) {
-        return this.functions[name];
-      }
-      throw new Error(`Variable '${name}' is not defined`);
+    // Then check functions (for function calls)
+    if (name in this.functions) {
+      return this.functions[name];
     }
+    
+    // Finally check environment
+    try {
+      if (this.environment) {
+        return this.environment.get(name);
+      }
+    } catch (e) {
+      // Don't throw here, we'll throw our own error below
+    }
+    
+    // If we get here, the variable wasn't found
+    throw new RuntimeError(
+      `Undefined variable '${name}'`,
+      0,
+      0
+    );
   }
 
   /**
@@ -183,24 +196,56 @@ export class EvaluationContext {
   }
 
   /**
+   * Check if a function is async
+   * @param {string} name - The function name
+   * @returns {boolean} True if the function is async
+   */
+  isAsyncFunction(name) {
+    return this.asyncFunctions.has(name);
+  }
+
+  /**
    * Register a function in the context
    * @param {string} name - The function name
    * @param {Function} func - The function implementation
+   * @param {boolean} isAsync - Whether the function is asynchronous
    * @returns {Function} The wrapped function
    */
-  registerFunction(name, func) {
+  registerFunction(name, func, isAsync = false) {
     // Wrap the function to ensure proper argument handling
     const wrappedFunc = (...args) => {
-      // If there's a single argument that's an array, unwrap it
-      // This handles the case where function arguments come from an AST CallExpression
+      // Special handling for array arguments
       if (args.length === 1 && Array.isArray(args[0])) {
-        return func(args[0]);
+        // If there's only one argument and it's an array, it could be:
+        // 1. An actual array parameter from the script
+        // 2. The arguments array from a CallExpression
+        
+        // Check if this array contains arrays or objects that appear to be AST nodes
+        const isArgArray = args[0].some(item => 
+          (typeof item === 'object' && item !== null && 
+           (item.type || Array.isArray(item)))
+        );
+        
+        if (isArgArray) {
+          // This is likely an arguments array, so pass it to the function
+          return func(...args[0]);
+        } else {
+          // This is likely an actual array parameter, pass it directly
+          return func(args[0]);
+        }
       }
-      // Otherwise pass all arguments
+      
+      // Otherwise pass all arguments directly
       return func(...args);
     };
     
     this.functions[name] = wrappedFunc;
+    
+    // Mark as async if needed
+    if (isAsync) {
+      this.asyncFunctions.add(name);
+    }
+    
     return wrappedFunc;
   }
 
@@ -248,45 +293,40 @@ export class EvaluationContext {
       actualValue = value;
     }
     
-    // Convert key to string to ensure it's a valid object property
-    const stringKey = String(actualKey);
+    this.jsonData[actualKey] = actualValue;
+    return actualValue;
+  }
+
+  /**
+   * Output a value to the console
+   * @param {*} value - The value to output
+   * @returns {*} The original value
+   */
+  console_put(value) {
+    // Handle array case from CallExpression
+    const actualValue = Array.isArray(value) && value.length === 1 ? value[0] : value;
     
-    // Store the value
-    this.jsonData[stringKey] = actualValue;
+    // Convert to string and add to console output
+    this.consoleOutput.push(this.stringify(actualValue));
     
     return actualValue;
   }
 
   /**
-   * Append a value to the console output
-   * 
-   * @param {*} value - The value to output to console
-   * @returns {string} The stringified value that was output
-   */
-  console_put(value) {
-    if (value !== undefined) {
-      // Use String() for simple conversion without extra formatting
-      const stringValue = String(value);
-      this.consoleOutput.push(stringValue);
-      return stringValue;
-    }
-    return '';
-  }
-
-  /**
-   * Create a child context with the same JSON data and console output
-   * but with a new scope for variables
-   * 
+   * Create a child context for a function call
    * @returns {EvaluationContext} A new child context
    */
   createChildContext() {
     const childContext = new EvaluationContext(this.jsonData, this.consoleOutput);
     
-    // Share functions with parent
-    childContext.functions = this.functions;
-    
-    // Create a new environment that extends the current one
-    childContext.environment = this.environment.extend();
+    // Copy registered functions
+    Object.keys(this.functions).forEach(key => {
+      childContext.functions[key] = this.functions[key];
+      
+      if (this.asyncFunctions.has(key)) {
+        childContext.asyncFunctions.add(key);
+      }
+    });
     
     return childContext;
   }

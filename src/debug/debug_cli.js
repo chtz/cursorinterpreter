@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
-import readline from 'node:readline';
+import fs from 'fs';
+import readline from 'readline';
+import { Interpreter } from '../interpreter/index.js';
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false
+/**
+ * Promisified readline.question for async/await
+ */
+export async function gets(rl) {
+  return new Promise((resolve) => {
+    rl.question('', (answer) => {
+      resolve(answer);
+    });
   });
-
-  export async function gets(rl) {
-    for await (const line of rl) {
-      return line; // gibt die erste Zeile zurück
-    }
-    return null; // EOF
-  }
+}
 
 /**
  * DEBUG UTILITY FILE - INTERPRETER CLI
@@ -31,47 +31,48 @@ const rl = readline.createInterface({
  * node src/debug/debug_cli.js ./scripts/test.script '{"name":"John","age":30}'
  */
 
-import { promises as fs } from 'fs';
-import { resolve } from 'path';
-import { Interpreter } from '../interpreter/index.js';
-
+/**
+ * Run a script file with the interpreter
+ */
 async function runScript(scriptPath, jsonParamsStr = '{}') {
   try {
-    // Validate and parse JSON params
-    let jsonData;
-    try {
-      jsonData = JSON.parse(jsonParamsStr);
-    } catch (e) {
-      console.error('Error: Invalid JSON parameters');
-      console.error(e.message);
-      process.exit(1);
-    }
-
-    // Read the script file
-    const absolutePath = resolve(scriptPath);
-    let sourceCode;
-    try {
-      sourceCode = await fs.readFile(absolutePath, 'utf8');
-    } catch (err) {
-      console.error(`Error: Could not read script file: ${absolutePath}`);
-      console.error(err.message);
-      process.exit(1);
-    }
-
-    //console.log('===== DEBUG CLI EXECUTION =====');
-    //console.log(`Script: ${absolutePath}`);
-    //console.log('Parameters:', JSON.stringify(jsonData, null, 2));
-    //console.log('');
-
-    // Create interpreter instance
+    // Create readline interface
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    
+    // Create a new interpreter instance
     const interpreter = new Interpreter();
     
-    // Parse script
-    //console.log('Parsing script...');
+    // Parse the JSON parameters
+    let jsonData = {};
+    try {
+      jsonData = JSON.parse(jsonParamsStr);
+    } catch (err) {
+      console.error('Error parsing JSON parameters:', err.message);
+      process.exit(1);
+    }
+    
+    // Read the script file
+    let sourceCode = '';
+    try {
+      sourceCode = fs.readFileSync(scriptPath, 'utf8');
+    } catch (err) {
+      console.error('Error reading script file:', err.message);
+      process.exit(1);
+    }
+    
+    //console.log('\n===== DEBUG EXECUTION =====');
+    //console.log(`Script: ${scriptPath}`);
+    //console.log(`JSON parameters: ${JSON.stringify(jsonData, null, 2)}`);
+    
+    // Parse the script
     const parseResult = interpreter.parse(sourceCode);
     
+    // Check for parsing errors
     if (!parseResult.success) {
-      console.error('Parse errors:');
+      console.log('Parsing failed!');
       parseResult.errors.forEach(error => {
         console.error(`[${error.line}:${error.column}] ${error.message}`);
       });
@@ -84,13 +85,13 @@ async function runScript(scriptPath, jsonParamsStr = '{}') {
     const consoleOutput = [];
     
     // Register a special debug function
-    interpreter.registerFunction('readline', (...args) => { // FIXME register async function
-      return gets(rl);
-    });
+    interpreter.registerFunction('readline', async (...args) => {
+      return await gets(rl);
+    }, true); // Mark as async
     
     // Execute the script
     //console.log('\nExecuting script...');
-    const evalResult = interpreter.evaluate(jsonData, consoleOutput);
+    const evalResult = await interpreter.evaluate(jsonData, consoleOutput);
     
     // Display results
     //console.log('\n----- EXECUTION RESULTS -----');
@@ -118,6 +119,9 @@ async function runScript(scriptPath, jsonParamsStr = '{}') {
     
     //console.log('\n===== END DEBUG EXECUTION =====');
     
+    // Close the readline interface
+    rl.close();
+    
     // Return exit code based on success
     process.exit(evalResult.success ? 0 : 1);
     
@@ -141,5 +145,5 @@ if (args.length === 0) {
 const scriptPath = args[0];
 const jsonParamsStr = args.length > 1 ? args[1] : '{}';
 
-// Run the script
+// Run the script with async/await
 runScript(scriptPath, jsonParamsStr); 

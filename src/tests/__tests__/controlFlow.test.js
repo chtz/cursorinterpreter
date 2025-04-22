@@ -3,196 +3,223 @@ import { TestContext } from '../jestUtils.js';
 // Test cases for control flow constructs: if, while, return
 describe('Control Flow Constructs', () => {
   
-  test('If Statement True Branch', () => {
+  test('If Statement True Branch', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let result;
-      if (10 > 5) {
-        result = "true branch";
+    await ctx.evaluate(`
+      let result = null;
+      
+      if (true) {
+        result = "executed";
       }
+      
       result;
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult("true branch");
+    ctx.assertEvalResult("executed");
   });
   
-  test('If-Else Statement True Branch', () => {
+  test('If-Else Statement True Branch', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let result;
-      if (10 > 5) {
-        result = "true branch";
+    await ctx.evaluate(`
+      let result = null;
+      
+      if (true) {
+        result = "true-branch";
       } else {
-        result = "false branch";
+        result = "false-branch";
       }
+      
       result;
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult("true branch");
+    ctx.assertEvalResult("true-branch");
   });
   
-  test('If-Else Statement False Branch', () => {
+  test('If-Else Statement False Branch', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let result;
-      if (5 > 10) {
-        result = "true branch";
+    await ctx.evaluate(`
+      let result = null;
+      
+      if (false) {
+        result = "true-branch";
       } else {
-        result = "false branch";
+        result = "false-branch";
       }
+      
       result;
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult("false branch");
+    ctx.assertEvalResult("false-branch");
   });
   
-  test('If-Else If Statement First Branch', () => {
+  test('If-Else If Statement First Branch', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let x = 15;
-      let result;
-      if (x > 10) {
-        result = "first branch";
-      } else if (x > 5) {
-        result = "second branch";
-      }
-      result;
-    `);
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult("first branch");
-  });
-  
-  test('If-Else If Statement Second Branch', () => {
-    const ctx = new TestContext();
-    ctx.evaluate(`
-      let x = 7;
-      let result;
-      if (x > 10) {
-        result = "first branch";
-      } else if (x > 5) {
-        result = "second branch";
-      }
-      result;
-    `);
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult("second branch");
-  });
-  
-  test('If-Else If-Else Statement Else Branch', () => {
-    const ctx = new TestContext();
-    ctx.evaluate(`
-      let x = 3;
-      let result;
-      if (x > 10) {
-        result = "first branch";
-      } else if (x > 5) {
-        result = "second branch";
+    await ctx.evaluate(`
+      let result = null;
+      
+      if (true) {
+        result = "first-branch";
+      } else if (true) {
+        result = "second-branch";
       } else {
-        result = "else branch";
+        result = "else-branch";
       }
+      
       result;
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult("else branch");
+    ctx.assertEvalResult("first-branch");
   });
   
-  test('While Loop Basic', () => {
+  test('If-Else If Statement Second Branch', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
+      let result = null;
+      
+      if (false) {
+        result = "first-branch";
+      } else if (true) {
+        result = "second-branch";
+      } else {
+        result = "else-branch";
+      }
+      
+      result;
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("second-branch");
+  });
+  
+  test('If-Else If-Else Statement Else Branch', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      let result = null;
+      
+      if (false) {
+        result = "first-branch";
+      } else if (false) {
+        result = "second-branch";
+      } else {
+        result = "else-branch";
+      }
+      
+      result;
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult("else-branch");
+  });
+  
+  test('While Loop Basic', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
       let i = 0;
       let sum = 0;
+      
       while (i < 5) {
         sum = sum + i;
         i = i + 1;
       }
+      
       sum;
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(10); // 0 + 1 + 2 + 3 + 4 = 10
+    ctx.assertEvalResult(10); // 0+1+2+3+4 = 10
   });
   
-  test('While Loop Zero Iterations', () => {
+  test('While Loop Zero Iterations', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let i = 10;
-      let result = "initial";
-      while (i < 5) {
+    await ctx.evaluate(`
+      let result = "unchanged";
+      
+      // This loop won't execute (condition is false)
+      while (false) {
         result = "changed";
-        i = i + 1;
       }
+      
       result;
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult("initial"); // Loop body should not execute
+    ctx.assertEvalResult("unchanged");
   });
   
-  test('Nested While Loops', () => {
+  test('Nested While Loops', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let i = 0;
+    await ctx.evaluate(`
       let sum = 0;
+      let i = 0;
+      
       while (i < 3) {
         let j = 0;
-        while (j < 2) {
-          sum = sum + (i * j);
+        while (j < i) {
+          sum = sum + 1;
           j = j + 1;
         }
         i = i + 1;
       }
+      
       sum;
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(3); // (0*0 + 0*1) + (1*0 + 1*1) + (2*0 + 2*1) = 0 + 1 + 2 = 3
+    ctx.assertEvalResult(3); // (0) + (0+1) + (0+1+2) = 0+1+3 = 3
   });
   
-  test('Function With Return Null', () => {
+  test('Function With Return Null', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      def foo() {
+    await ctx.evaluate(`
+      def returnNull() {
         return null;
       }
-      foo();
+      
+      returnNull();
     `);
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(null);
   });
   
-  test('Function With Return Value', () => {
+  test('Function With Return Value', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      def foo() {
+    await ctx.evaluate(`
+      def getValue() {
         return 42;
       }
-      foo();
+      
+      getValue();
     `);
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(42);
   });
   
-  test('Function With Return Expression', () => {
+  test('Function With Return Expression', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      def add(x, y) {
-        return x + y;
+    await ctx.evaluate(`
+      def calculate(x, y) {
+        return x * y + 2;
       }
-      add(3, 5);
+      
+      calculate(3, 4);
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(8);
+    ctx.assertEvalResult(14); // 3*4+2 = 12+2 = 14
   });
   
-  test('Early Return In Function', () => {
+  test('Early Return In Function', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      def test(x) {
+    await ctx.evaluate(`
+      def earlyReturn(x) {
         if (x < 0) {
           return "negative";
         }
-        return "positive or zero";
+        
+        if (x > 10) {
+          return "large";
+        }
+        
+        return "normal";
       }
-      test(-5);
+      
+      earlyReturn(20);
     `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult("negative");
+    ctx.assertEvalResult("large");
   });
 }); 

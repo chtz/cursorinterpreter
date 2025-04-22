@@ -3,16 +3,19 @@ import { TestContext } from '../jestUtils.js';
 // Test cases for basic language features: variables, literals, expressions
 describe('Basic Language Features', () => {
   
-  test('Variable Declaration', () => {
+  test('Variable Declaration', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('let x = 10; x;');
+    await ctx.evaluate(`
+      let x = 42;
+      x;
+    `);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(10);
+    ctx.assertEvalResult(42);
   });
   
-  test('Multiple Variable Declarations', () => {
+  test('Multiple Variable Declarations', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       let x = 10;
       let y = 20;
       x + y;
@@ -21,98 +24,98 @@ describe('Basic Language Features', () => {
     ctx.assertEvalResult(30);
   });
   
-  test('Number Literal', () => {
+  test('Number Literal', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('42;');
+    await ctx.evaluate(`123;`);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(42);
+    ctx.assertEvalResult(123);
   });
   
-  test('Float Number Literal', () => {
+  test('Float Number Literal', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('3.14;');
+    await ctx.evaluate(`3.14159;`);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(3.14);
+    ctx.assertEvalResult(3.14159);
   });
   
-  test('String Literal Double Quotes', () => {
+  test('String Literal Double Quotes', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('"Hello, world!";');
+    await ctx.evaluate(`"Hello, world!";`);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult('Hello, world!');
+    ctx.assertEvalResult("Hello, world!");
   });
   
-  test('String Literal Single Quotes', () => {
+  test('String Literal Single Quotes', async () => {
     const ctx = new TestContext();
-    ctx.evaluate("'Hello, world!';");
+    await ctx.evaluate(`'Hello, world!';`);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult('Hello, world!');
+    ctx.assertEvalResult("Hello, world!");
   });
   
-  test('Boolean Literal True', () => {
+  test('Boolean Literal True', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('true;');
+    await ctx.evaluate(`true;`);
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(true);
   });
   
-  test('Boolean Literal False', () => {
+  test('Boolean Literal False', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('false;');
+    await ctx.evaluate(`false;`);
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(false);
   });
   
-  test('Null Literal', () => {
+  test('Null Literal', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('null;');
+    await ctx.evaluate(`null;`);
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(null);
   });
   
-  test('Assignment Statement', () => {
+  test('Assignment Statement', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let x = 10;
-      x = 20;
+    await ctx.evaluate(`
+      let x;
+      x = 42;
       x;
     `);
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(20);
-  });
-  
-  test('Binary Expression Addition', () => {
-    const ctx = new TestContext();
-    ctx.evaluate('5 + 3;');
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(8);
-  });
-  
-  test('Binary Expression Subtraction', () => {
-    const ctx = new TestContext();
-    ctx.evaluate('10 - 4;');
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(6);
-  });
-  
-  test('Binary Expression Multiplication', () => {
-    const ctx = new TestContext();
-    ctx.evaluate('6 * 7;');
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(42);
   });
   
-  test('Binary Expression Division', () => {
+  test('Binary Expression Addition', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('20 / 5;');
+    await ctx.evaluate(`5 + 3;`);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(4);
+    ctx.assertEvalResult(8);
   });
   
-  test('Binary Expression Modulus', () => {
+  test('Binary Expression Subtraction', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('10 % 3;');
+    await ctx.evaluate(`10 - 4;`);
     ctx.assertEvalSuccess();
-    ctx.assertEvalResult(1);
+    ctx.assertEvalResult(6);
+  });
+  
+  test('Binary Expression Multiplication', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`6 * 7;`);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(42);
+  });
+  
+  test('Binary Expression Division', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`20 / 4;`);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(5);
+  });
+  
+  test('Binary Expression Modulus', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`17 % 5;`);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(2);
   });
 }); 

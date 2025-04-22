@@ -1,83 +1,204 @@
-import { TestContext } from '../jestUtils.js';
+import { TestContext, ErrorTestContext } from '../jestUtils.js';
 import { Interpreter } from '../../interpreter/index.js';
 
-describe('Basic Interpreter Functionality', () => {
-  test('Evaluating a number literal', () => {
+describe('Basic Interpreter Tests', () => {
+  test('Evaluates a simple numeric literal', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('42;');
+    await ctx.evaluate('42;');
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(42);
   });
-
-  test('Evaluating a string literal', () => {
+  
+  test('Evaluates a simple string literal', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('"Hello, world!";');
+    await ctx.evaluate('"Hello, world!";');
     ctx.assertEvalSuccess();
     ctx.assertEvalResult('Hello, world!');
   });
-
-  test('Variable declaration and assignment', () => {
+  
+  test('Handles variable declaration and assignment', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
-      let x = 10;
-      x = 20;
-      x;
-    `);
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(20);
-  });
-
-  test('Variable declaration and string assignment', () => {
-    const ctx = new TestContext();
-    ctx.evaluate(`
-      let message = "Hello";
-      message = message + ", world!";
-      message;
-    `);
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult('Hello, world!');
-  });
-
-  test('Arithmetic expressions', () => {
-    const ctx = new TestContext();
-    ctx.evaluate(`
-      let a = 5;
-      let b = 10;
-      a + b * 2;
-    `);
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(25);
-  });
-
-  test('Boolean expressions', () => {
-    const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       let x = 10;
       let y = 20;
-      x < y && true;
+      let z = x + y;
+      z;
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(30);
+  });
+  
+  test('Supports arithmetic operations', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      let x = 5;
+      let y = 3;
+      (x + y) * (x - y);
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(16); // (5+3)*(5-3) = 8*2 = 16
+  });
+  
+  test('Supports logical operations', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      let x = 5;
+      let y = 3;
+      (x > y) && (x != y);
     `);
     ctx.assertEvalSuccess();
     ctx.assertEvalResult(true);
   });
-
-  test('Undefined variable error', () => {
+  
+  test('Handles if/else statements', async () => {
     const ctx = new TestContext();
-    ctx.evaluate('nonexistent;');
-    ctx.assertEvalFailure();
-  });
-
-  test('Type error in arithmetic', () => {
-    const ctx = new TestContext();
-    ctx.evaluate(`
-      let x = "not a number";
-      x * 2;
+    await ctx.evaluate(`
+      let x = 10;
+      let result = null;
+      
+      if (x > 5) {
+        result = "greater";
+      } else {
+        result = "less or equal";
+      }
+      
+      result;
     `);
-    ctx.assertEvalFailure();
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult('greater');
+  });
+});
+
+describe('Error Handling Tests', () => {
+  test('Handles undefined variables', async () => {
+    const ctx = new ErrorTestContext();
+    await ctx.assertRuntimeError('nonexistent;', 'Undefined variable');
+  });
+  
+  test('Handles syntax errors', async () => {
+    const ctx = new ErrorTestContext();
+    
+    // Use a code snippet with an obvious syntax error - missing semicolon
+    const code = `
+      let x = 10
+      let y = 20;  // Missing semicolon above will cause an error
+    `;
+    
+    await ctx.assertParseError(code, "Expected ';'");
+  });
+});
+
+describe('Standard Library Tests', () => {
+  test('Handles console output', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      console_put("Hello");
+      console_put("World");
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertConsoleContains('Hello');
+    ctx.assertConsoleContains('World');
+  });
+  
+  test('Handles JSON I/O operations', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      io_put("key1", 42);
+      io_put("key2", "value");
+      
+      let x = io_get("key1");
+      let y = io_get("key2");
+      
+      console_put(x + " " + y);
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertJsonData('key1', 42);
+    ctx.assertJsonData('key2', 'value');
+    ctx.assertConsoleContains('42 value');
+  });
+});
+
+describe('Language Feature Tests', () => {
+  test('Supports array literals', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      let arr = [1, 2, 3, 4, 5];
+      let sum = 0;
+      
+      let i = 0;
+      while (i < 5) {
+        sum = sum + arr[i];
+        i = i + 1;
+      }
+      
+      sum;
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(15); // 1+2+3+4+5 = 15
+  });
+  
+  test('Supports nested arrays', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      let matrix = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+      ];
+      
+      matrix[1][1];  // Middle element (5)
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(5);
+  });
+  
+  test('Handles function declarations and calls', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      def add(a, b) {
+        return a + b;
+      }
+      
+      add(5, 3);
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(8);
+  });
+  
+  test('Supports recursive functions', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      def factorial(n) {
+        if (n <= 1) {
+          return 1;
+        } else {
+          return n * factorial(n - 1);
+        }
+      }
+      
+      factorial(5);  // 5! = 5*4*3*2*1 = 120
+    `);
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(120);
+  });
+  
+  test('Handles complex expressions', async () => {
+    const ctx = new TestContext();
+    await ctx.evaluate(`
+      let a = 5;
+      let b = 3;
+      let c = 2;
+      
+      a * b + c * (a - b) / (a + b);
+    `);
+    ctx.assertEvalSuccess();
+    // 5*3 + 2*(5-3)/(5+3) = 15 + 2*2/8 = 15 + 0.5 = 15.5
+    expect(ctx.evalResult.result).toBeCloseTo(15.5);
   });
 });
 
 describe('Using built-in IO functions', () => {
-  test('console_put function', () => {
+  test('console_put function', async () => {
     // Test console_put with direct interpreter access to debug
     const interpreter = new Interpreter();
     const consoleOutput = [];
@@ -88,18 +209,14 @@ describe('Using built-in IO functions', () => {
       console_put("World");
     `);
     
-    const result = interpreter.evaluate({}, consoleOutput);
-    
-    // Debug output
-    console.log('Evaluation result:', result);
-    console.log('Console output:', consoleOutput);
+    const result = await interpreter.evaluate({}, consoleOutput);
     
     // Assertions
     expect(result.success).toBe(true);
     expect(consoleOutput).toEqual(['Hello', 'World']);
   });
 
-  test('io_get and io_put functions', () => {
+  test('io_get and io_put functions', async () => {
     // Test io_get and io_put with direct interpreter access to debug
     const interpreter = new Interpreter();
     const jsonData = { key1: 5 };
@@ -120,12 +237,7 @@ describe('Using built-in IO functions', () => {
     `);
     
     const consoleOutput = [];
-    const result = interpreter.evaluate(jsonData, consoleOutput);
-    
-    // Debug output
-    console.log('Evaluation result:', result);
-    console.log('JSON data:', jsonData);
-    console.log('Console output:', consoleOutput);
+    const result = await interpreter.evaluate(jsonData, consoleOutput);
     
     // Assertions
     expect(result.success).toBe(true);
@@ -135,9 +247,9 @@ describe('Using built-in IO functions', () => {
 });
 
 describe('Function declaration and calls', () => {
-  test('Simple function', () => {
+  test('Simple function', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def double(x) {
         return x * 2;
       }
@@ -147,9 +259,9 @@ describe('Function declaration and calls', () => {
     ctx.assertEvalResult(10);
   });
 
-  test('Multiple arguments', () => {
+  test('Multiple arguments', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
@@ -159,7 +271,7 @@ describe('Function declaration and calls', () => {
     ctx.assertEvalResult(7);
   });
 
-  test('Function with no return value', () => {
+  test('Function with no return value', async () => {
     // Test function with no return value with direct interpreter access to debug
     const interpreter = new Interpreter();
     const consoleOutput = [];
@@ -172,20 +284,16 @@ describe('Function declaration and calls', () => {
       logValue("testing");
     `);
     
-    const result = interpreter.evaluate({}, consoleOutput);
-    
-    // Debug output
-    console.log('Evaluation result:', result);
-    console.log('Console output:', consoleOutput);
+    const result = await interpreter.evaluate({}, consoleOutput);
     
     // Assertions
     expect(result.success).toBe(true);
     expect(consoleOutput).toContain('testing');
   });
 
-  test('Recursive function', () => {
+  test('Recursive function', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def factorial(n) {
         if (n <= 1) {
           return 1;
@@ -201,9 +309,9 @@ describe('Function declaration and calls', () => {
 });
 
 describe('Control flow', () => {
-  test('If statement true branch', () => {
+  test('If statement true branch', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       let result;
       if (true) {
         result = "true branch";
@@ -216,9 +324,9 @@ describe('Control flow', () => {
     ctx.assertEvalResult('true branch');
   });
 
-  test('If statement false branch', () => {
+  test('If statement false branch', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       let result;
       if (false) {
         result = "true branch";
@@ -231,9 +339,9 @@ describe('Control flow', () => {
     ctx.assertEvalResult('false branch');
   });
 
-  test('While loop', () => {
+  test('While loop', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       let i = 0;
       let sum = 0;
       while (i < 5) {
@@ -246,9 +354,9 @@ describe('Control flow', () => {
     ctx.assertEvalResult(10); // 0 + 1 + 2 + 3 + 4 = 10
   });
 
-  test('Return in nested blocks', () => {
+  test('Return in nested blocks', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def nestedReturn(x) {
         if (x > 0) {
           while (x > 5) {

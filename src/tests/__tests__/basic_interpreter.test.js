@@ -1,35 +1,41 @@
 import { Interpreter } from '../../interpreter/index.js';
 
 describe('Basic Interpreter Tests', () => {
-  test('simple variable assignment and retrieval', () => {
+  test('simple variable assignment and retrieval', async () => {
     const interpreter = new Interpreter();
+    
+    // Parse simple code that assigns and returns a variable
     interpreter.parse(`
       let x = 10;
       x;
     `);
     
-    const result = interpreter.evaluate();
+    const result = await interpreter.evaluate();
     
     expect(result.success).toBe(true);
     expect(result.result).toBe(10);
   });
   
-  test('arithmetic operations', () => {
+  test('arithmetic operations', async () => {
     const interpreter = new Interpreter();
+    
+    // Parse code with arithmetic operations
     interpreter.parse(`
-      let a = 5;
-      let b = 3;
-      a + b * 2;
+      let x = 5;
+      let y = 3;
+      x + (y * 2);
     `);
     
-    const result = interpreter.evaluate();
+    const result = await interpreter.evaluate();
     
     expect(result.success).toBe(true);
     expect(result.result).toBe(11); // 5 + (3 * 2)
   });
   
-  test('if/else statements', () => {
+  test('if/else statements', async () => {
     const interpreter = new Interpreter();
+    
+    // Parse code with if/else statement
     interpreter.parse(`
       let x = 10;
       let result;
@@ -37,20 +43,22 @@ describe('Basic Interpreter Tests', () => {
       if (x > 5) {
         result = "greater";
       } else {
-        result = "lesser";
+        result = "less or equal";
       }
       
       result;
     `);
     
-    const result = interpreter.evaluate();
+    const result = await interpreter.evaluate();
     
     expect(result.success).toBe(true);
     expect(result.result).toBe("greater");
   });
   
-  test('while loops', () => {
+  test('while loops', async () => {
     const interpreter = new Interpreter();
+    
+    // Parse code with a while loop
     interpreter.parse(`
       let i = 0;
       let sum = 0;
@@ -63,14 +71,16 @@ describe('Basic Interpreter Tests', () => {
       sum;
     `);
     
-    const result = interpreter.evaluate();
+    const result = await interpreter.evaluate();
     
     expect(result.success).toBe(true);
     expect(result.result).toBe(10); // 0 + 1 + 2 + 3 + 4
   });
   
-  test('function declarations and calls', () => {
+  test('function declarations and calls', async () => {
     const interpreter = new Interpreter();
+    
+    // Parse code with a function declaration and call
     interpreter.parse(`
       def add(a, b) {
         return a + b;
@@ -79,14 +89,16 @@ describe('Basic Interpreter Tests', () => {
       add(3, 4);
     `);
     
-    const result = interpreter.evaluate();
+    const result = await interpreter.evaluate();
     
     expect(result.success).toBe(true);
     expect(result.result).toBe(7);
   });
   
-  test('recursive functions', () => {
+  test('recursive functions', async () => {
     const interpreter = new Interpreter();
+    
+    // Parse code with a recursive function
     interpreter.parse(`
       def factorial(n) {
         if (n <= 1) {
@@ -99,98 +111,68 @@ describe('Basic Interpreter Tests', () => {
       factorial(5);
     `);
     
-    const result = interpreter.evaluate();
+    const result = await interpreter.evaluate();
     
     expect(result.success).toBe(true);
     expect(result.result).toBe(120); // 5 * 4 * 3 * 2 * 1
   });
   
-  test('console output with array', () => {
+  test('console output with array', async () => {
     const interpreter = new Interpreter();
+    const consoleOutput = [];
     
-    // First check if there are any parse errors
-    const parseResult = interpreter.parse(`
-      // Create an array by hand
-      let output0 = "Hello";
-      let output1 = "World";
-      
-      // Return multiple values as array
-      def get_outputs() {
-        return output0;
-      }
-      
-      get_outputs();
+    // Parse code that uses console_put with arrays
+    interpreter.parse(`
+      let arr = [1, 2, 3];
+      console_put(arr);
     `);
     
-    if (!parseResult.success) {
-      console.log("Parse errors:", parseResult.errors);
-    } else {
-      // If parse was successful, then evaluate
-      const result = interpreter.evaluate();
-      
-      if (!result.success) {
-        console.log("Evaluation errors:", result.errors);
-      } else {
-        expect(result.result).toBe("Hello");
-      }
-    }
+    await interpreter.evaluate({}, consoleOutput);
+    
+    expect(consoleOutput.length).toBe(1);
+    expect(consoleOutput[0]).toBe('[1,2,3]');
   });
   
-  test('variable assignments with arithmetic', () => {
+  test('variable assignments with arithmetic', async () => {
     const interpreter = new Interpreter();
     
-    // First check if there are any parse errors
-    const parseResult = interpreter.parse(`
-      let key1 = 5;
-      let key2 = key1 * 2;
-      key2;
+    // Parse code that assigns variables with arithmetic
+    interpreter.parse(`
+      let x = 5;
+      let y = x * 2;
+      let z = y - 3;
+      z;
     `);
     
-    if (!parseResult.success) {
-      console.log("Parse errors:", parseResult.errors);
-    } else {
-      // If parse was successful, then evaluate
-      const result = interpreter.evaluate();
-      
-      if (!result.success) {
-        console.log("Evaluation errors:", result.errors);
-      } else {
-        expect(result.result).toBe(10);
-      }
-    }
+    const result = await interpreter.evaluate();
+    
+    expect(result.success).toBe(true);
+    expect(result.result).toBe(7); // (5 * 2) - 3 = 10 - 3 = 7
   });
   
-  test('custom power function', () => {
+  test('custom power function', async () => {
     const interpreter = new Interpreter();
     
-    // First check if there are any parse errors
-    const parseResult = interpreter.parse(`
-      // Define a power function
-      def power(base, exponent) {
+    // Parse code that defines and uses a power function
+    interpreter.parse(`
+      def pow(base, exponent) {
         let result = 1;
         let i = 0;
+        
         while (i < exponent) {
           result = result * base;
           i = i + 1;
         }
+        
         return result;
       }
       
-      // Call with different values
-      power(4, 2);
+      pow(2, 3);
     `);
     
-    if (!parseResult.success) {
-      console.log("Parse errors:", parseResult.errors);
-    } else {
-      // If parse was successful, then evaluate
-      const result = interpreter.evaluate();
-      
-      if (!result.success) {
-        console.log("Evaluation errors:", result.errors);
-      } else {
-        expect(result.result).toBe(16);
-      }
-    }
+    const result = await interpreter.evaluate();
+    
+    expect(result.success).toBe(true);
+    expect(result.result).toBe(8); // 2^3 = 2 * 2 * 2 = 8
   });
 }); 

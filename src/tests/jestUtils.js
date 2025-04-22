@@ -59,9 +59,9 @@ export class TestContext {
 
   /**
    * Evaluate the code in the context
-   * @returns {TestContext} for chaining
+   * @returns {Promise<TestContext>} for chaining
    */
-  evaluate(code, jsonData) {
+  async evaluate(code, jsonData) {
     // Use provided code or the code set with withCode
     if (code) {
       this.code = code;
@@ -74,8 +74,8 @@ export class TestContext {
     const evalJsonData = jsonData || { ...this.jsonData };
     const consoleOutput = [];
     
-    // Evaluate the parsed code
-    this.evalResult = this.interpreter.evaluate(evalJsonData, consoleOutput);
+    // Evaluate the parsed code - note this is now awaited
+    this.evalResult = await this.interpreter.evaluate(evalJsonData, consoleOutput);
     
     // Update our state with the results from evaluation
     this.jsonData = evalJsonData;
@@ -277,5 +277,85 @@ export class TestContext {
         expect(actualNode[key]).toEqual(expected[key]);
       }
     });
+  }
+}
+
+/**
+ * Error test context for testing parse and runtime errors
+ */
+export class ErrorTestContext {
+  constructor() {
+    this.interpreter = new Interpreter();
+    this.code = '';
+  }
+
+  /**
+   * Assert that the code causes a parse error
+   * @param {string} code - The code to parse
+   * @param {string} errorSubstring - A substring that should be in the error message
+   */
+  async assertParseError(code, errorSubstring) {
+    this.code = code;
+    
+    // Parse the code
+    const parseResult = this.interpreter.parse(this.code);
+    
+    // Check if parsing failed
+    expect(parseResult.success).toBe(false);
+    expect(parseResult.errors.length).toBeGreaterThan(0);
+    
+    // Check if any error contains the expected substring
+    const errorMessages = parseResult.errors.map(err => err.message);
+    const matchingError = errorMessages.some(msg => 
+      msg.toLowerCase().includes(errorSubstring.toLowerCase())
+    );
+    
+    // If no matching error is found, display the actual errors
+    if (!matchingError) {
+      console.log(`Expected error containing: "${errorSubstring}"`);
+      console.log(`Actual errors:`, errorMessages);
+    }
+    
+    expect(matchingError).toBe(true);
+  }
+
+  /**
+   * Assert that the code causes a runtime error
+   * @param {string} code - The code to evaluate
+   * @param {string} errorSubstring - A substring that should be in the error message
+   */
+  async assertRuntimeError(code, errorSubstring) {
+    this.code = code;
+    
+    // Parse the code
+    const parseResult = this.interpreter.parse(this.code);
+    
+    // Parsing should succeed, but evaluation should fail
+    expect(parseResult.success).toBe(true);
+    
+    const jsonData = {};
+    const consoleOutput = [];
+    
+    // Evaluate the code
+    const evalResult = await this.interpreter.evaluate(jsonData, consoleOutput);
+    
+    expect(evalResult.success).toBe(false);
+    // Ensure errors is an array (handle undefined case)
+    const errors = evalResult.errors || [];
+    expect(errors.length).toBeGreaterThan(0);
+    
+    // Check if any error contains the expected substring
+    const errorMessages = errors.map(err => err.message);
+    const matchingError = errorMessages.some(msg => 
+      msg.toLowerCase().includes(errorSubstring.toLowerCase())
+    );
+    
+    // If no matching error is found, display the actual errors
+    if (!matchingError) {
+      console.log(`Expected error containing: "${errorSubstring}"`);
+      console.log(`Actual errors:`, errorMessages);
+    }
+    
+    expect(matchingError).toBe(true);
   }
 } 

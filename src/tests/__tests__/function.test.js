@@ -3,9 +3,9 @@ import { TestContext } from '../jestUtils.js';
 // Test cases for functions and function calls
 describe('Functions and Function Calls', () => {
   
-  test('Function Declaration And Call', () => {
+  test('Function Declaration And Call', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
@@ -15,9 +15,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult(5);
   });
   
-  test('Function Declaration No Parameters', () => {
+  test('Function Declaration No Parameters', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def greet() {
         return "Hello, world!";
       }
@@ -27,9 +27,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult("Hello, world!");
   });
   
-  test('Function Call With Variables', () => {
+  test('Function Call With Variables', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
@@ -42,9 +42,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult(8);
   });
   
-  test('Function Call No Arguments', () => {
+  test('Function Call No Arguments', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def getDefaultValue() {
         return 42;
       }
@@ -55,9 +55,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult(42);
   });
   
-  test('Function Call With Expressions', () => {
+  test('Function Call With Expressions', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def multiply(a, b) {
         return a * b;
       }
@@ -68,9 +68,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult(40); // (5 + 3) * (10 / 2) = 8 * 5 = 40
   });
   
-  test('Nested Function Calls', () => {
+  test('Nested Function Calls', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
@@ -85,9 +85,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult(20); // add(2, 3) = 5, multiply(5, 4) = 20
   });
   
-  test('Built-in Function Call: console_put', () => {
+  test('Built-in Function Call: console_put', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       console_put("Hello");
       console_put("World");
     `);
@@ -96,9 +96,9 @@ describe('Functions and Function Calls', () => {
     expect(ctx.consoleOutput).toContain("World");
   });
   
-  test('Built-in Function Call: io_get and io_put', () => {
+  test('Built-in Function Call: io_get and io_put', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       io_put("key", 42);
       let value = io_get("key");
       value;
@@ -109,9 +109,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertJsonData("key", 42);
   });
   
-  test('Function Call As Expression', () => {
+  test('Function Call As Expression', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def add(a, b) {
         return a + b;
       }
@@ -122,9 +122,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult(16); // add(5, 3) = 8, 8 * 2 = 16
   });
   
-  test('Function With Return In If Statement', () => {
+  test('Function With Return In If Statement', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def max(a, b) {
         if (a > b) {
           return a;
@@ -139,9 +139,9 @@ describe('Functions and Function Calls', () => {
     ctx.assertEvalResult(10);
   });
   
-  test('Recursive Function', () => {
+  test('Recursive Function', async () => {
     const ctx = new TestContext();
-    ctx.evaluate(`
+    await ctx.evaluate(`
       def factorial(n) {
         if (n <= 1) {
           return 1;

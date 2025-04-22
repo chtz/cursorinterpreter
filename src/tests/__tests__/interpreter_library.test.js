@@ -1,185 +1,203 @@
 import { TestContext } from '../jestUtils.js';
 
 describe('Library Function Plugin Mechanism', () => {
-  test('Registering and using a simple library function', () => {
-    const ctx = new TestContext();
-    
-    // Register a math_add library function
-    ctx.registerFunction('math_add', (args) => {
-      return args[0] + args[1];
-    });
-    
-    ctx.evaluate(`
-      math_add(5, 7);
-    `);
-    
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(12);
-  });
   
-  test('Calling library function with variable arguments', () => {
+  test('Registering and using a simple library function', async () => {
     const ctx = new TestContext();
     
-    // Register a math_multiply library function
-    ctx.registerFunction('math_multiply', (args) => {
-      return args[0] * args[1];
+    // Register a simple doubling function
+    ctx.interpreter.registerFunction('double', (value) => {
+      return value * 2;
     });
     
-    ctx.evaluate(`
-      let x = 10;
-      let y = 5;
-      math_multiply(x, y);
-    `);
-    
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(50);
-  });
-  
-  test('Library function with array processing', () => {
-    const ctx = new TestContext();
-    
-    // Register array_sum function
-    ctx.registerFunction('array_sum', (args) => {
-      const arr = Array.isArray(args) && args.length === 1 && Array.isArray(args[0]) 
-        ? args[0]  // Unwrap nested array
-        : args;    // Use as is
-
-      if (!Array.isArray(arr)) {
-        return 0;
-      }
-      
-      const sum = arr.reduce((sum, val) => sum + Number(val), 0);
-      return sum;
-    });
-    
-    // Create test data in JSON
-    const jsonData = {
-      numbers: [1, 2, 3, 4, 5]
-    };
-    
-    // Evaluate program
-    ctx.evaluate(`
-      let numbers = io_get("numbers");
-      let result = array_sum(numbers);
+    await ctx.evaluate(`
+      let result = double(21);
+      console_put("Result: " + result);
       result;
-    `, jsonData);
-    
-    ctx.assertEvalSuccess();
-    ctx.assertEvalResult(15); // 1 + 2 + 3 + 4 + 5 = 15
-  });
-  
-  test('Library function with side effects', () => {
-    const ctx = new TestContext();
-    
-    let capturedLog = [];
-    
-    // Register a custom logging function
-    ctx.registerFunction('custom_log', (args) => {
-      const message = args[0];
-      capturedLog.push(message);
-      return null;
-    });
-    
-    ctx.evaluate(`
-      custom_log("Start");
-      let x = 42;
-      custom_log("Value: " + x);
-      custom_log("End");
     `);
     
     ctx.assertEvalSuccess();
-    expect(capturedLog).toEqual(["Start", "Value: 42", "End"]);
+    ctx.assertEvalResult(42);
+    ctx.assertConsoleContains("Result: 42");
   });
   
-  test('Registering and using a date formatting library function', () => {
+  test('Calling library function with variable arguments', async () => {
+    const ctx = new TestContext();
+    
+    // Register a sum function that works with variable arguments
+    ctx.interpreter.registerFunction('sum', (...args) => {
+      // Flatten argument array if needed
+      const flatArgs = Array.isArray(args[0]) ? args[0] : args;
+      // Sum all numeric arguments
+      return flatArgs.reduce((acc, val) => acc + val, 0);
+    });
+    
+    await ctx.evaluate(`
+      let a = 5;
+      let b = 10;
+      let c = 15;
+      
+      // Call with a mix of literals and variables
+      let result = sum(a, b, c, 20);
+      console_put("Sum: " + result);
+      result;
+    `);
+    
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(50); // 5 + 10 + 15 + 20 = 50
+    ctx.assertConsoleContains("Sum: 50");
+  });
+  
+  test('Library function with array processing', async () => {
+    const ctx = new TestContext();
+    
+    // Register a function that processes each element and returns the sum
+    ctx.interpreter.registerFunction('processArray', (arr) => {
+      // Convert any strings to numbers and sum them
+      return arr.reduce((sum, x) => sum + Number(x), 0);
+    });
+    
+    await ctx.evaluate(`
+      let numbers = [10, 20, 30];
+      let result = processArray(numbers);
+      console_put("Sum: " + result);
+      result;
+    `);
+    
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(60); // 10 + 20 + 30 = 60
+    ctx.assertConsoleContains("Sum: 60");
+  });
+  
+  test('Library function with side effects', async () => {
+    const ctx = new TestContext();
+    
+    // Use a simple counter for the test
+    let counter = 0;
+    
+    // Register functions to interact with the counter
+    ctx.interpreter.registerFunction('getCounter', () => {
+      return counter;
+    });
+    
+    ctx.interpreter.registerFunction('incrementCounter', () => {
+      counter += 1;
+      return counter;
+    });
+    
+    await ctx.evaluate(`
+      // Get initial value
+      let initial = getCounter();
+      console_put("Initial: " + initial);
+      
+      // Increment
+      let incremented = incrementCounter();
+      console_put("Incremented: " + incremented);
+      
+      incremented;
+    `);
+    
+    ctx.assertEvalSuccess();
+    ctx.assertEvalResult(1);
+    ctx.assertConsoleContains("Initial: 0");
+    ctx.assertConsoleContains("Incremented: 1");
+    
+    // Verify the counter was modified
+    expect(counter).toBe(1);
+  });
+  
+  test('Library function with date formatting', async () => {
     const ctx = new TestContext();
     
     // Register a date formatting function
-    ctx.registerFunction('format_date', (args) => {
-      const timestamp = args[0];
-      const format = args[1] || 'short';
-      
-      try {
-        const date = new Date(timestamp);
-        
-        if (format === 'short') {
-          return date.toLocaleDateString();
-        } else if (format === 'long') {
-          return date.toLocaleString();
-        } else {
-          return date.toISOString();
-        }
-      } catch (e) {
-        return 'Invalid date';
-      }
+    ctx.interpreter.registerFunction('formatDate', (dateStr) => {
+      const date = new Date(dateStr);
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      return date.toLocaleDateString('en-US', options);
     });
     
-    // Mock date for consistent testing
-    const timestamp = new Date('2023-01-15T12:30:00Z').getTime();
-    
-    ctx.evaluate(`
-      let ts = io_get("timestamp");
-      let shortFormat = format_date(ts, "short");
-      let longFormat = format_date(ts, "long");
-      let isoFormat = format_date(ts, "iso");
-      
-      console_put(shortFormat);
-      console_put(longFormat);
-      console_put(isoFormat);
-    `, { timestamp: timestamp });
+    await ctx.evaluate(`
+      let isoDate = "2023-12-25";
+      let formattedDate = formatDate(isoDate);
+      console_put(formattedDate);
+      formattedDate;
+    `);
     
     ctx.assertEvalSuccess();
-    expect(ctx.evalResult.consoleOutput.length).toBe(3);
+    ctx.assertEvalResult("December 25, 2023");
+    ctx.assertConsoleContains("December 25, 2023");
   });
   
-  test('Interacting with the outside world through library functions', () => {
+  test('Interacting with the outside world through library functions', async () => {
     const ctx = new TestContext();
     
-    // Create a mock web API function that returns string directly
-    const apiCalls = [];
-    ctx.registerFunction('get_user', (args) => {
-      // Record the call for testing
-      apiCalls.push(args);
-      
-      // Return a user name directly
-      return "Alice";
+    // Simple API simulator that always succeeds
+    ctx.interpreter.registerFunction('callAPI', () => {
+      return { 
+        status: "success", 
+        data: { id: 123, result: "API call succeeded" }
+      };
     });
     
-    // Use a very simple API call that returns a string
-    ctx.evaluate(`
-      let user = get_user("users");
-      io_put("user", user);
-      user;
+    await ctx.evaluate(`
+      // Call the API
+      let response = callAPI();
+      console_put("API status: " + response.status);
+      console_put("API result: " + response.data.result);
+      
+      response.data.id;
     `);
     
     ctx.assertEvalSuccess();
-    expect(apiCalls.length).toBe(1);
-    expect(ctx.jsonData.user).toBe('Alice');
-    expect(ctx.evalResult.result).toBe('Alice');
+    ctx.assertEvalResult(123);
+    ctx.assertConsoleContains("API status: success");
+    ctx.assertConsoleContains("API result: API call succeeded");
   });
-
-  test('Combining custom library functions and script functions', () => {
+  
+  test('Combining custom library functions and script functions', async () => {
     const ctx = new TestContext();
     
-    // Register a string manipulation function
-    ctx.registerFunction('string_reverse', (args) => {
-      const str = String(args[0]);
-      return str.split('').reverse().join('');
-    });
-    
-    ctx.evaluate(`
-      // Define a script function that uses the library function
-      def processText(text) {
-        let reversed = string_reverse(text);
-        return text + " -> " + reversed;
+    // Register a string utility function with proper array handling
+    ctx.interpreter.registerFunction('capitalize', (str) => {
+      // If we got an array, extract the string from it
+      if (Array.isArray(str) && str.length === 1) {
+        str = str[0];
       }
       
-      // Call the script function
-      let result = processText("hello");
-      console_put(result);
+      if (typeof str !== 'string') {
+        console.log('Warning: Non-string passed to capitalize:', str);
+        return str;
+      }
+      
+      try {
+        const result = str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        console.log(`Capitalize result: '${str}' -> '${result}'`);
+        return result;
+      } catch (error) {
+        console.log('Error in capitalize function:', error, 'for input:', str);
+        throw error;
+      }
+    });
+    
+    await ctx.evaluate(`
+      // Define a script function that uses the library function
+      def formatName(firstName, lastName) {
+        // Make explicit calls to capitalize and store results
+        let first = capitalize(firstName);
+        let last = capitalize(lastName);
+        
+        // Return the concatenated result
+        return first + " " + last;
+      }
+      
+      // Use both functions together
+      let name = formatName("joHN", "DOE");
+      console_put("Formatted name: " + name);
+      name;
     `);
     
     ctx.assertEvalSuccess();
-    ctx.assertConsoleContains('hello -> olleh');
+    ctx.assertEvalResult("John Doe");
+    ctx.assertConsoleContains("Formatted name: John Doe");
   });
 }); 

@@ -20,7 +20,7 @@ export class Interpreter {
    * if (parseResult.success) {
    *   const jsonData = {};
    *   const consoleOutput = [];
-   *   const evalResult = interpreter.evaluate(jsonData, consoleOutput);
+   *   const evalResult = await interpreter.evaluate(jsonData, consoleOutput);
    *   console.log(evalResult);
    * }
    * ```
@@ -91,7 +91,7 @@ export class Interpreter {
   /**
    * Evaluate the AST and return the result
    */
-  evaluate(jsonData = {}, consoleOutput = []) {
+  async evaluate(jsonData = {}, consoleOutput = []) {
     this.errors = [];
     
     try {
@@ -101,9 +101,13 @@ export class Interpreter {
       
       // Copy registered functions from previous context if it exists
       if (prevContext && prevContext.functions) {
-        Object.keys(prevContext.functions).forEach(funcName => {
-          this.context.registerFunction(funcName, prevContext.functions[funcName]);
-        });
+        // Deep copy functions to ensure they're preserved
+        this.context.functions = { ...prevContext.functions };
+        
+        // Copy async functions
+        if (prevContext.asyncFunctions) {
+          this.context.asyncFunctions = new Set([...prevContext.asyncFunctions]);
+        }
       } else {
         // Re-register built-in functions if we don't have a previous context
         this.registerBuiltInFunctions();
@@ -127,7 +131,7 @@ export class Interpreter {
       }
       
       // Evaluate the program - the consoleOutput and jsonData will be modified directly
-      const result = evaluate(this.ast, this.context);
+      const result = await evaluate(this.ast, this.context);
       
       return {
         success: true,
@@ -165,13 +169,17 @@ export class Interpreter {
   
   /**
    * Register a custom library function
+   * @param {string} name - The name of the function
+   * @param {Function} implementation - The function implementation
+   * @param {boolean} isAsync - Whether the function is asynchronous (defaults to false)
+   * @returns {Function} The wrapped function
    */
-  registerFunction(name, implementation) {
+  registerFunction(name, implementation, isAsync = false) {
     if (!this.context) {
       this.context = new EvaluationContext();
     }
     
-    return this.context.registerFunction(name, implementation);
+    return this.context.registerFunction(name, implementation, isAsync);
   }
   
   /**
@@ -212,11 +220,11 @@ export class Interpreter {
  * @param {EvaluationContext} context - The evaluation context
  * @returns {*} The result of evaluation
  */
-export function evaluate(ast, context) {
+export async function evaluate(ast, context) {
   // If the AST is an instance of a class rather than a plain object,
   // and it has an evaluate method, use that directly
   if (ast && typeof ast === 'object' && typeof ast.evaluate === 'function') {
-    return ast.evaluate(context);
+    return await ast.evaluate(context);
   }
 
   // Handle nodes defined as plain objects with type property
@@ -226,7 +234,7 @@ export function evaluate(ast, context) {
       let result = null;
       const statements = ast.statements || ast.body;
       for (const statement of statements) {
-        result = evaluate(statement, context);
+        result = await evaluate(statement, context);
       }
       return result;
     }
@@ -234,13 +242,14 @@ export function evaluate(ast, context) {
   }
 
   switch (ast.type) {
-    case 'Program':
+    case 'Program': {
       let result = null;
       const statements = ast.statements || ast.body || [];
       for (const statement of statements) {
-        result = evaluate(statement, context);
+        result = await evaluate(statement, context);
       }
       return result;
+    }
 
     case 'NumericLiteral':
     case 'NumberLiteral':
@@ -248,20 +257,17 @@ export function evaluate(ast, context) {
 
     case 'StringLiteral':
       return ast.value;
-
-    case 'BooleanLiteral':
-      return ast.value;
-
-    case 'NullLiteral':
-      return null;
-
-    case 'Identifier':
-      return context.lookupVariable(ast.name);
-
+      
+    case 'Identifier': {
+      // Important: Handle identifiers which may be variables or functions
+      const name = ast.name;
+      return context.lookupVariable(name);
+    }
+    
     case 'BinaryExpression':
-    case 'InfixExpression':
-      const left = evaluate(ast.left, context);
-      const right = evaluate(ast.right, context);
+    case 'InfixExpression': {
+      const left = await evaluate(ast.left, context);
+      const right = await evaluate(ast.right, context);
 
       switch (ast.operator) {
         case '+': return left + right;
@@ -269,179 +275,193 @@ export function evaluate(ast, context) {
         case '*': return left * right;
         case '/': return left / right;
         case '%': return left % right;
-        case '==': return left == right;
-        case '!=': return left != right;
         case '<': return left < right;
         case '>': return left > right;
         case '<=': return left <= right;
         case '>=': return left >= right;
+        case '==': return left === right;
+        case '!=': return left !== right;
         case '&&': return left && right;
         case '||': return left || right;
-        default:
-          throw new Error(`Unknown binary operator: ${ast.operator}`);
+        default: throw new Error(`Unknown binary operator: ${ast.operator}`);
       }
-
+    }
+    
     case 'UnaryExpression':
-    case 'PrefixExpression':
-      const argument = evaluate(ast.argument || ast.right, context);
+    case 'PrefixExpression': {
+      const argument = await evaluate(ast.argument || ast.right, context);
       switch (ast.operator) {
         case '-': return -argument;
         case '!': return !argument;
-        default:
-          throw new Error(`Unknown unary operator: ${ast.operator}`);
+        default: throw new Error(`Unknown unary operator: ${ast.operator}`);
       }
-
-    case 'VariableDeclaration':
+    }
+    
+    case 'VariableDeclaration': {
       const initializer = ast.initializer || ast.init;
-      const varValue = initializer ? evaluate(initializer, context) : undefined;
+      const varValue = initializer ? await evaluate(initializer, context) : undefined;
       return context.assignVariable(ast.name || (ast.id && ast.id.name), varValue);
+    }
 
     case 'AssignmentExpression':
-    case 'AssignmentStatement':
-      const leftExpr = ast.left || ast.name;
-      const leftName = typeof leftExpr === 'string' ? leftExpr : 
-                       leftExpr.type === 'Identifier' ? leftExpr.name : null;
-      
-      if (!leftName) {
+    case 'AssignmentStatement': {
+      let leftName;
+      if (ast.name) {
+        leftName = ast.name;
+      } else if (ast.left && ast.left.type === 'Identifier') {
+        leftName = ast.left.name;
+      } else {
         throw new Error('Left side of assignment must be an identifier');
       }
-      const assignValue = evaluate(ast.right || ast.value, context);
+      const assignValue = await evaluate(ast.right || ast.value, context);
       return context.assignVariable(leftName, assignValue);
+    }
 
-    case 'BlockStatement':
+    case 'BlockStatement': {
       let blockResult = null;
       const blockStatements = ast.statements || ast.body || [];
       for (const statement of blockStatements) {
-        blockResult = evaluate(statement, context);
+        blockResult = await evaluate(statement, context);
       }
       return blockResult;
+    }
 
-    case 'IfStatement':
-      const test = evaluate(ast.test || ast.condition, context);
+    case 'IfStatement': {
+      const test = await evaluate(ast.test || ast.condition, context);
       if (test) {
-        return evaluate(ast.consequent || ast.consequence, context);
+        return await evaluate(ast.consequent || ast.consequence, context);
       } else if (ast.alternate || ast.alternative) {
-        return evaluate(ast.alternate || ast.alternative, context);
+        return await evaluate(ast.alternate || ast.alternative, context);
       }
       return null;
+    }
 
-    case 'WhileStatement':
+    case 'WhileStatement': {
       let whileResult = null;
       const whileCondition = ast.test || ast.condition;
       const whileBody = ast.body;
       
-      while (evaluate(whileCondition, context)) {
-        whileResult = evaluate(whileBody, context);
+      while (await evaluate(whileCondition, context)) {
+        whileResult = await evaluate(whileBody, context);
       }
       return whileResult;
+    }
 
-    case 'FunctionDeclaration':
-      const funcName = ast.name || (ast.id && ast.id.name);
-      const params = ast.parameters || (ast.params && ast.params.map(param => 
-        typeof param === 'string' ? param : param.name));
+    case 'CallExpression': {
+      // Extract the function name and handle different node structures
+      let functionName = null;
+      if (ast.callee) {
+        if (typeof ast.callee === 'string') {
+          functionName = ast.callee;
+        } else if (ast.callee.type === 'Identifier') {
+          functionName = ast.callee.name;
+        }
+      }
       
-      const func = {
-        params: params || [],
-        body: ast.body,
-        name: funcName
-      };
-      return context.assignVariable(funcName, func);
-
-    case 'CallExpression':
-      // Check if this is a built-in function first
-      const callee = ast.callee;
-      if (callee && callee.type === 'Identifier') {
-        const funcName = callee.name;
-        
-        // Try to find a library function first
-        const libraryFunc = context.lookupFunction(funcName);
+      if (functionName) {
+        // First check for library functions directly
+        const libraryFunc = context.lookupFunction(functionName);
         
         if (libraryFunc) {
-          const args = (ast.arguments || []).map(arg => evaluate(arg, context));
-          return libraryFunc(...args);
+          // Evaluate all arguments
+          const args = [];
+          for (const arg of (ast.arguments || [])) {
+            args.push(await evaluate(arg, context));
+          }
+          
+          // Check if this is an async function
+          if (context.isAsyncFunction && context.isAsyncFunction(functionName)) {
+            return await libraryFunc(...args);
+          } else {
+            return libraryFunc(...args);
+          }
         }
         
         // Then check for special IO functions (for backward compatibility)
-        if (funcName === 'io_get' && ast.arguments && ast.arguments.length === 1) {
-          const key = evaluate(ast.arguments[0], context);
-          const value = context.io_get(key);
-          
-          // Make sure we're returning a copy of arrays to prevent unintended modifications
-          if (Array.isArray(value)) {
-            return [...value];
-          }
-          
-          return value;
+        if (functionName === 'io_get' && ast.arguments && ast.arguments.length === 1) {
+          const key = await evaluate(ast.arguments[0], context);
+          return context.io_get(key);
         }
         
-        if (funcName === 'io_put' && ast.arguments && ast.arguments.length === 2) {
-          const key = evaluate(ast.arguments[0], context);
-          const value = evaluate(ast.arguments[1], context);
+        if (functionName === 'io_put' && ast.arguments && ast.arguments.length === 2) {
+          const key = await evaluate(ast.arguments[0], context);
+          const value = await evaluate(ast.arguments[1], context);
           return context.io_put(key, value);
         }
         
-        if (funcName === 'console_put' && ast.arguments && ast.arguments.length >= 1) {
-          const value = evaluate(ast.arguments[0], context);
+        if (functionName === 'console_put' && ast.arguments && ast.arguments.length >= 1) {
+          const value = await evaluate(ast.arguments[0], context);
           return context.console_put(value);
         }
         
-        // Finally try to find a user-defined function
-        const func = context.lookupVariable(funcName);
+        // Check for user-defined functions
+        const func = context.lookupVariable(functionName);
         if (typeof func === 'object' && func !== null && 'params' in func && 'body' in func) {
-          const args = (ast.arguments || []).map(arg => evaluate(arg, context));
+          // Evaluate all arguments
+          const funcArgs = [];
+          for (const arg of (ast.arguments || [])) {
+            funcArgs.push(await evaluate(arg, context));
+          }
           
           // Create a new context with function parameters
-          const callContext = new EvaluationContext(context.jsonData, context.consoleOutput);
-          
-          // Copy existing variables
-          Object.keys(context.variables).forEach(key => {
-            callContext.assignVariable(key, context.variables[key]);
-          });
-          
-          // Copy functions from parent context
-          Object.keys(context.functions).forEach(key => {
-            callContext.registerFunction(key, context.functions[key]);
-          });
+          const callContext = context.createChildContext();
           
           // Bind arguments to parameters
-          func.params.forEach((param, index) => {
-            if (index < args.length) {
-              callContext.assignVariable(param, args[index]);
-            } else {
-              callContext.assignVariable(param, null);
-            }
-          });
+          for (let i = 0; i < func.params.length; i++) {
+            callContext.assignVariable(func.params[i], funcArgs[i] || null);
+          }
+          
+          // Copy registered functions to new context
+          for (const key in context.functions) {
+            callContext.registerFunction(
+              key, 
+              context.functions[key], 
+              context.asyncFunctions && context.asyncFunctions.has(key)
+            );
+          }
           
           // Evaluate the function body with the new context
-          const result = evaluate(func.body, callContext);
+          const result = await evaluate(func.body, callContext);
           
           // Return the result - it could be a ReturnValue which needs unwrapping
-          return result instanceof ReturnValue ? result.value : result;
+          if (result && typeof result === 'object' && result.type === 'ReturnValue') {
+            return result.value;
+          }
+          
+          return result;
         }
       }
       
-      throw new Error(`Function not found: ${ast.callee && ast.callee.name}`);
+      // If we get here, we're calling a non-function
+      throw new Error(`Cannot call non-function: ${functionName || 'unknown'}`);
+    }
 
     case 'ReturnStatement':
-      return ast.argument ? evaluate(ast.argument || ast.value, context) : null;
+      return ast.argument ? await evaluate(ast.argument || ast.value, context) : null;
 
-    case 'ArrayExpression':
-      return (ast.elements || []).map(element => evaluate(element, context));
+    case 'ArrayExpression': {
+      const elements = [];
+      for (const element of (ast.elements || [])) {
+        elements.push(await evaluate(element, context));
+      }
+      return elements;
+    }
 
-    case 'ObjectExpression':
+    case 'ObjectExpression': {
       const obj = {};
       for (const property of (ast.properties || [])) {
         const key = property.key.type === 'Identifier' 
           ? property.key.name 
-          : evaluate(property.key, context);
-        obj[key] = evaluate(property.value, context);
+          : await evaluate(property.key, context);
+        obj[key] = await evaluate(property.value, context);
       }
       return obj;
+    }
 
-    case 'MemberExpression':
-      const object = evaluate(ast.object, context);
+    case 'MemberExpression': {
+      const object = await evaluate(ast.object, context);
       const property = ast.computed 
-        ? evaluate(ast.property, context)
+        ? await evaluate(ast.property, context)
         : ast.property.name;
       
       if (object === null || object === undefined) {
@@ -449,9 +469,10 @@ export function evaluate(ast, context) {
       }
       
       return object[property];
+    }
 
     case 'ExpressionStatement':
-      return evaluate(ast.expression, context);
+      return await evaluate(ast.expression, context);
 
     default:
       throw new Error(`Unknown AST node type: ${ast.type}`);

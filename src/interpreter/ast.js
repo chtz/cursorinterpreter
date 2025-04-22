@@ -25,7 +25,7 @@ export class Node {
   }
   
   // Base evaluate method - should be overridden by derived classes
-  evaluate(context) {
+  async evaluate(context) {
     throw new Error(`${this.constructor.name} does not implement evaluate()`);
   }
 }
@@ -44,11 +44,11 @@ export class Program extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     let result = null;
     
     for (const statement of this.statements) {
-      result = statement.evaluate(context);
+      result = await statement.evaluate(context);
       
       // Early return if we hit a return statement
       if (result instanceof ReturnValue) {
@@ -76,11 +76,11 @@ export class BlockStatement extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     let result = null;
     
     for (const statement of this.statements) {
-      result = statement.evaluate(context);
+      result = await statement.evaluate(context);
       
       // Early return from blocks if we hit a return statement
       if (result instanceof ReturnValue) {
@@ -106,8 +106,8 @@ export class ExpressionStatement extends Node {
     };
   }
   
-  evaluate(context) {
-    return this.expression.evaluate(context);
+  async evaluate(context) {
+    return await this.expression.evaluate(context);
   }
 }
 
@@ -127,8 +127,8 @@ export class VariableDeclaration extends Node {
     };
   }
   
-  evaluate(context) {
-    const value = this.initializer ? this.initializer.evaluate(context) : null;
+  async evaluate(context) {
+    const value = this.initializer ? await this.initializer.evaluate(context) : null;
     return context.getEnvironment().define(this.name, value);
   }
 }
@@ -149,8 +149,8 @@ export class AssignmentStatement extends Node {
     };
   }
   
-  evaluate(context) {
-    const value = this.value.evaluate(context);
+  async evaluate(context) {
+    const value = await this.value.evaluate(context);
     return context.getEnvironment().assign(this.name, value, this.position);
   }
 }
@@ -173,8 +173,8 @@ export class FunctionDeclaration extends Node {
     };
   }
   
-  evaluate(context) {
-    const func = (args) => {
+  async evaluate(context) {
+    const func = async (args) => {
       // Create a new environment with the parent as the current environment
       const functionEnv = context.getEnvironment().extend();
       
@@ -192,7 +192,7 @@ export class FunctionDeclaration extends Node {
       
       let result;
       try {
-        result = this.body.evaluate(context);
+        result = await this.body.evaluate(context);
       } finally {
         // Restore the original environment
         context.environment = previousEnv;
@@ -225,8 +225,8 @@ export class ReturnStatement extends Node {
     };
   }
   
-  evaluate(context) {
-    const value = this.value ? this.value.evaluate(context) : null;
+  async evaluate(context) {
+    const value = this.value ? await this.value.evaluate(context) : null;
     return new ReturnValue(value);
   }
 }
@@ -249,13 +249,13 @@ export class IfStatement extends Node {
     };
   }
   
-  evaluate(context) {
-    const condition = this.condition.evaluate(context);
+  async evaluate(context) {
+    const condition = await this.condition.evaluate(context);
     
     if (isTruthy(condition)) {
-      return this.consequence.evaluate(context);
+      return await this.consequence.evaluate(context);
     } else if (this.alternative) {
-      return this.alternative.evaluate(context);
+      return await this.alternative.evaluate(context);
     }
     
     return null;
@@ -278,11 +278,11 @@ export class WhileStatement extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     let result = null;
     
-    while (isTruthy(this.condition.evaluate(context))) {
-      result = this.body.evaluate(context);
+    while (isTruthy(await this.condition.evaluate(context))) {
+      result = await this.body.evaluate(context);
       
       // Handle return statements inside the loop
       if (result instanceof ReturnValue) {
@@ -310,15 +310,27 @@ export class Identifier extends Node {
     };
   }
   
-  evaluate(context) {
-    // Check if it's a function name
-    const func = context.lookupFunction(this.name);
-    if (func) {
-      return func;
+  async evaluate(context) {
+    try {
+      // First try to look up via the context's lookupVariable method
+      // which also checks for functions
+      return context.lookupVariable(this.name);
+    } catch (error) {
+      // If that fails, fall back to environment if it exists
+      try {
+        if (context.getEnvironment) {
+          return context.getEnvironment().get(this.name, this.position);
+        }
+      } catch (envError) {
+        // Ignore environment error, we'll throw our own below
+      }
+      
+      throw new RuntimeError(
+        `Undefined variable '${this.name}'`,
+        this.position.line,
+        this.position.column
+      );
     }
-    
-    // Otherwise, look up as a variable
-    return context.lookupVariable(this.name);
   }
 }
 
@@ -336,7 +348,7 @@ export class NumberLiteral extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     return this.value;
   }
 }
@@ -355,7 +367,7 @@ export class StringLiteral extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     return this.value;
   }
 }
@@ -374,7 +386,7 @@ export class BooleanLiteral extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     return this.value;
   }
 }
@@ -391,7 +403,7 @@ export class NullLiteral extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     return null;
   }
 }
@@ -412,19 +424,20 @@ export class PrefixExpression extends Node {
     };
   }
   
-  evaluate(context) {
-    const right = this.right.evaluate(context);
+  async evaluate(context) {
+    const right = await this.right.evaluate(context);
     
     switch (this.operator) {
       case '-':
-        if (typeof right !== 'number') {
-          throw new RuntimeError(`Cannot negate a non-number: ${right}`, this.position.line, this.position.column);
-        }
         return -right;
       case '!':
         return !isTruthy(right);
       default:
-        throw new RuntimeError(`Unknown prefix operator: ${this.operator}`, this.position.line, this.position.column);
+        throw new RuntimeError(
+          `Unknown prefix operator: ${this.operator}`,
+          this.position.line,
+          this.position.column
+        );
     }
   }
 }
@@ -447,81 +460,78 @@ export class InfixExpression extends Node {
     };
   }
   
-  evaluate(context) {
-    const left = this.left.evaluate(context);
-    const right = this.right.evaluate(context);
+  async evaluate(context) {
+    const left = await this.left.evaluate(context);
+    
+    // Short-circuit for logical operators
+    if (this.operator === '&&') {
+      return isTruthy(left) ? await this.right.evaluate(context) : left;
+    }
+    
+    if (this.operator === '||') {
+      return isTruthy(left) ? left : await this.right.evaluate(context);
+    }
+    
+    const right = await this.right.evaluate(context);
     
     switch (this.operator) {
-      // Arithmetic operators
       case '+':
-        if (typeof left === 'number' && typeof right === 'number') {
-          return left + right;
-        }
+        // Handle string concatenation
         if (typeof left === 'string' || typeof right === 'string') {
           return String(left) + String(right);
         }
-        throw new RuntimeError(`Cannot add ${typeof left} and ${typeof right}`, this.position.line, this.position.column);
+        return left + right;
+      
       case '-':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot subtract non-numbers`, this.position.line, this.position.column);
-        }
         return left - right;
+      
       case '*':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot multiply non-numbers`, this.position.line, this.position.column);
-        }
         return left * right;
+      
       case '/':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot divide non-numbers`, this.position.line, this.position.column);
-        }
         if (right === 0) {
-          throw new RuntimeError(`Division by zero`, this.position.line, this.position.column);
+          throw new RuntimeError(
+            'Division by zero',
+            this.position.line,
+            this.position.column
+          );
         }
         return left / right;
+      
       case '%':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot compute modulo of non-numbers`, this.position.line, this.position.column);
-        }
         if (right === 0) {
-          throw new RuntimeError(`Modulo by zero`, this.position.line, this.position.column);
+          throw new RuntimeError(
+            'Modulo by zero',
+            this.position.line,
+            this.position.column
+          );
         }
         return left % right;
       
-      // Comparison operators
-      case '==':
-        return left === right;
-      case '!=':
-        return left !== right;
       case '<':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot compare non-numbers with <`, this.position.line, this.position.column);
-        }
         return left < right;
+      
       case '>':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot compare non-numbers with >`, this.position.line, this.position.column);
-        }
         return left > right;
+      
       case '<=':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot compare non-numbers with <=`, this.position.line, this.position.column);
-        }
         return left <= right;
+      
       case '>=':
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          throw new RuntimeError(`Cannot compare non-numbers with >=`, this.position.line, this.position.column);
-        }
         return left >= right;
       
-      // Logical operators
-      case '&&':
-        return isTruthy(left) && isTruthy(right);
-      case '||':
-        return isTruthy(left) || isTruthy(right);
+      case '==':
+        return left === right;
+      
+      case '!=':
+        return left !== right;
       
       default:
-        throw new RuntimeError(`Unknown infix operator: ${this.operator}`, this.position.line, this.position.column);
+        throw new RuntimeError(
+          `Unknown infix operator: ${this.operator}`,
+          this.position.line,
+          this.position.column
+        );
     }
   }
 }
@@ -541,36 +551,49 @@ export class CallExpression extends Node {
     };
   }
   
-  evaluate(context) {
+  async evaluate(context) {
     // First, evaluate the arguments
-    const args = this.arguments.map(arg => {
+    const args = [];
+    for (const arg of this.arguments) {
       try {
-        const value = arg.evaluate(context);
-        return value;
+        const value = await arg.evaluate(context);
+        args.push(value);
       } catch (error) {
         throw error;
       }
-    });
+    }
     
     // Then evaluate the callee
     let callee;
     try {
-      callee = this.callee.evaluate(context);
+      callee = await this.callee.evaluate(context);
     } catch (error) {
       throw error;
     }
     
     // Check if it's a library function
     if (callee instanceof LibraryFunction) {
-      // Deep unwrap array arguments for library functions
-      return callee.implementation(...args);
+      // Handle async library functions
+      if (callee.isAsync) {
+        return await callee.implementation(...args);
+      } else {
+        // Keep backward compatibility with sync library functions
+        return callee.implementation(...args);
+      }
     }
     
     // Check if it's a user-defined function
     if (typeof callee === 'function') {
-      // User defined functions in this interpreter expect args as a single array
-      // and we want to make sure arrays inside args aren't nested unnecessarily
-      return callee(args);
+      // Check if this is an async function
+      const funcName = this.callee.name; // Assuming callee is an Identifier
+      if (funcName && context.isAsyncFunction && context.isAsyncFunction(funcName)) {
+        // User defined async functions expect args as a single array
+        return await callee(args);
+      } else {
+        // User defined functions in this interpreter expect args as a single array
+        // and we want to make sure arrays inside args aren't nested unnecessarily
+        return callee(args);
+      }
     }
     
     throw new RuntimeError(
@@ -599,13 +622,13 @@ export class MemberExpression extends Node {
     };
   }
   
-  evaluate(context) {
-    const object = this.object.evaluate(context);
+  async evaluate(context) {
+    const object = await this.object.evaluate(context);
     let property;
     
     if (this.computed) {
       // Computed member access: obj[expr]
-      property = this.property.evaluate(context);
+      property = await this.property.evaluate(context);
     } else {
       // Static member access: obj.prop
       property = this.property.name;
@@ -633,8 +656,12 @@ export class ArrayLiteral extends Node {
     };
   }
   
-  evaluate(context) {
-    return this.elements.map(element => element.evaluate(context));
+  async evaluate(context) {
+    const result = [];
+    for (const element of this.elements) {
+      result.push(await element.evaluate(context));
+    }
+    return result;
   }
 }
 
