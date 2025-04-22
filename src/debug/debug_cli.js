@@ -95,6 +95,11 @@ async function runScript(scriptPath, jsonParamsStr = '{}') {
             return await writeLine(args[0]);
         }, true);
 
+        interpreter.registerFunction('int', async (...args) => {
+            const i = parseInt(args[0]);
+            return isNaN(i) ? null : i;
+        });
+
         // Execute the script
         //console.log('\nExecuting script...');
         const evalResult = await interpreter.evaluate(jsonData, consoleOutput);

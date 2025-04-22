@@ -71,6 +71,9 @@ export class Lexer {
       case '*':
         token = new Token(TokenType.ASTERISK, this.ch, this.line, this.column);
         break;
+      case '#':
+        this.skipComments();
+        return this.nextToken();
       case '/':
         if (this.peekChar() === '/' || this.peekChar() === '*') {
           this.skipComments();
@@ -267,7 +270,7 @@ export class Lexer {
    * Skips comments (both single-line and multi-line)
    */
   skipComments() {
-    if (this.ch === '/' && this.peekChar() === '/') {
+    if (this.ch === '#' || this.ch === '/' && this.peekChar() === '/') {
       // Single-line comment
       while (this.ch !== '\n' && this.ch !== '') {
         this.readChar();

@@ -1,7 +1,23 @@
-//echo "hallo\nwelt" | node src/debug/debug_cli.js scripts/test.script
+#!/usr/bin/env -S node src/debug/debug_cli.js
+
+// Sample: echo "hallo\n12\nwelt\n3" | ./scripts/test.script
+
+writeline("# Input");
 
 let s = readline();
+let sum = 0;
 while (s != null) {
-  writeline(">" + s + "<");
+
+  let i = int(s);
+  if (i != null) {
+    writeline("{" + s + "}");
+    sum = sum + i;
+  }
+  else {
+    writeline(">" + s + "<");
+  }
+
   s = readline();
 }
+
+writeline("# Sum: " + sum);
