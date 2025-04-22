@@ -1,51 +1,7 @@
-// Test script for the debug CLI utility
-// This demonstrates usage of the custom language with JSON input
+//echo "hallo\nwelt" | node src/debug/debug_cli.js scripts/test.script
 
-console_put("echo: " + readline());
-
-// Get name from the input JSON if provided
-let name = io_get("name");
-if (name == null) {
-  name = "Guest";
+let s = readline();
+while (s != null) {
+  writeline(">" + s + "<");
+  s = readline();
 }
-
-// Display a welcome message
-console_put("Welcome, " + name + "!");
-
-// Check for age in input JSON
-let age = io_get("age");
-if (age != null) {
-  if (age >= 18) {
-    console_put("You are an adult.");
-  } else {
-    console_put("You are a minor.");
-  }
-} else {
-  console_put("Age not provided.");
-}
-
-// Use a while loop for demonstration
-let count = io_get("count");
-if (count == null) {
-  count = 3;
-}
-
-let i = 0;
-console_put("Counting to " + count + ":");
-while (i < count) {
-  console_put("  Count: " + i);
-  i = i + 1;
-}
-
-// Store some calculated data
-io_put("greeting", "Hello, " + name);
-
-// Calculate doubled age without ternary
-let doubledAge = null;
-if (age != null) {
-  doubledAge = age * 2;
-}
-io_put("doubled_age", doubledAge);
-
-io_put("timestamp", "Script executed successfully");
-
