@@ -134,7 +134,7 @@ function IDE() {
           const consoleOutput = [];
           
           // Execute the program
-          setOutput(prevOutput => prevOutput + '$ Executing program...\n');
+          setOutput('$ Executing program...\n');
           const evalResult = interpreter.evaluate(parsedJsonData, consoleOutput);
           
           if (evalResult.success) {
@@ -147,10 +147,7 @@ function IDE() {
             // Format and display console output
             const formattedOutput = consoleOutput.map(line => `> ${line}`).join('\n');
             
-            setOutput(prevOutput => 
-              prevOutput + 
-              '$ Execution completed successfully.\n\n' +
-              '$ Program output:\n' +
+            setOutput('$ Program output:\n' +
               formattedOutput + '\n\n' +
               '$ Result: ' + (evalResult.result !== undefined ? JSON.stringify(evalResult.result) : 'undefined')
             );
