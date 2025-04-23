@@ -9,6 +9,10 @@ A simple, lightweight code interpreter built with modern web technologies follow
 3. Run `npm run dev` to start the development server
 4. Open your browser to the displayed URL
 
+## Try it Out
+
+You can try the Cursor Interpreter without installation at: [https://chtz.github.io/cursorinterpreter/](https://chtz.github.io/cursorinterpreter/)
+
 ## Project Overview
 
 This project combines:
