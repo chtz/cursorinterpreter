@@ -43,6 +43,8 @@ The language supports:
 - Arithmetic and logical operators
 - Control flow: if/else statements and while loops
 - Function declarations and calls
+- Closures and lexical scoping
+- Anonymous functions
 - Built-in I/O functions
 
 ### Grammar (EBNF)
@@ -63,6 +65,7 @@ Statement           ::= FunctionDeclaration
 
 /* Function declaration */
 FunctionDeclaration ::= "def" Identifier "(" ParameterList? ")" Block
+                      | "def" "(" ParameterList? ")" Block  /* Anonymous function */
 
 ParameterList       ::= Identifier ("," Identifier)*
 
@@ -99,6 +102,7 @@ Factor              ::= Primary
 Primary             ::= Literal
                       | Identifier
                       | FunctionCall
+                      | "def" "(" ParameterList? ")" Block  /* Anonymous function expression */
                       | "(" Expression ")"
                       | MemberExpression
                       | ArrayLiteral
@@ -258,6 +262,28 @@ if (isActive && userScore > 30) {
 } else {
   console_put("User is doing fine.");
 }
+
+// Anonymous functions and closures
+let createCounter = def() {
+  let count = 0;
+  return def() {
+    count = count + 1;
+    return count;
+  };
+};
+
+let counter = createCounter();
+let count1 = counter();  // 1
+let count2 = counter();  // 2
+console_put("Counter value: " + count2);
+
+// Using anonymous function as an argument
+def applyFunction(func, value) {
+  return func(value);
+}
+
+let doubled = applyFunction(def(x) { return x * 2; }, 5);
+console_put("Doubled value: " + doubled);  // 10
 
 // Store results back to JSON
 io_put("result", calculatedValue);

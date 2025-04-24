@@ -1565,7 +1565,7 @@ Each node in the AST is evaluated within an `EvaluationContext`, which provides 
 
 ### Variable Scoping and Binding
 
-Our language uses function-level scoping, where variables are visible within the function where they are declared. When a variable is referenced, the interpreter looks for it in the current scope.
+Our language uses lexical scoping with closure support, where variables are visible within their declaring scope and any inner functions. When a variable is referenced, the interpreter looks for it in the current scope, then in parent scopes up the chain.
 
 Variable declarations create new bindings in the current scope:
 
@@ -1611,11 +1611,32 @@ evaluate(context) {
 }
 ```
 
-While our language uses a simple flat scope for variables (no nested lexical scoping), the `EvaluationContext` is recreated for each function call, providing function-level isolation.
+While our language implements hierarchical lexical scoping with closure support, the `EvaluationContext` is recreated for each function call, providing function-level isolation while maintaining access to variables in parent scopes.
 
 ### Function Declaration and Execution
 
-Functions in our language are first-class objects that can be declared and called. Function declarations are implemented in the AST:
+Functions in our language are first-class objects that can be declared and called. Our language supports both named function declarations and anonymous functions:
+
+```javascript
+// Named function declaration
+def add(a, b) {
+  return a + b;
+}
+
+// Anonymous function assigned to a variable
+let multiply = def(a, b) {
+  return a * b;
+};
+
+// Anonymous function used as an argument
+def applyOperation(func, x, y) {
+  return func(x, y);
+}
+
+let result = applyOperation(def(a, b) { return a / b; }, 10, 2);
+```
+
+Function declarations are implemented in the AST:
 
 ```javascript
 // FunctionDeclaration node evaluation
@@ -1690,6 +1711,70 @@ Our function implementation supports important features such as:
 3. **Return values**: The `return` statement allows functions to return values
 4. **Recursion**: Functions can call themselves or other functions
 5. **Error propagation**: Runtime errors inside functions are propagated to the caller
+
+#### Closure Implementation
+
+Our language implements closures, allowing functions to retain access to variables from their defining scope even after that scope has exited. Closures are essential for advanced programming patterns like data encapsulation and function factories.
+
+The closure mechanism is implemented through parent context references in the evaluation context:
+
+```javascript
+// In runtime.js - Creating a child context for closures
+createChildContext(parameterVars = {}) {
+  // Create a new context that inherits from this context for closure support
+  const childContext = new EvaluationContext(this.jsonData, this.consoleOutput, this);
+  
+  // Add parameter variables to the child context
+  Object.entries(parameterVars).forEach(([name, value]) => {
+    childContext.assignVariable(name, value);
+  });
+  
+  return childContext;
+}
+
+// In runtime.js - Variable lookup with closure support
+lookupVariable(name) {
+  // First check variables in current context
+  if (name in this.variables) {
+    return this.variables[name];
+  }
+  
+  // Then check functions (for function calls)
+  if (name in this.functions) {
+    return this.functions[name];
+  }
+  
+  // Check parent context if available (closure support)
+  if (this.parentContext) {
+    try {
+      return this.parentContext.lookupVariable(name);
+    } catch (e) {
+      // Continue to environment check if parent doesn't have it
+    }
+  }
+  
+  // Further lookups...
+}
+```
+
+A classic closure example in our language creates a counter function that maintains an internal state:
+
+```javascript
+def createCounter() {
+  let count = 0;
+  return def() {
+    count = count + 1;
+    return count;
+  };
+}
+
+let counter = createCounter();
+console_put(counter()); // Outputs: 1
+console_put(counter()); // Outputs: 2
+console_put(counter()); // Outputs: 3
+```
+
+The inner function retains access to the `count` variable even after `createCounter` has finished executing, demonstrating true closure behavior.
 
 ### Control Flow Mechanisms
 
@@ -2522,9 +2607,9 @@ We prioritized detailed error messages with line and column information, which h
 
 We kept the built-in functions minimal (just IO operations), leaving most functionality to be implemented in the language itself. This simplifies the interpreter but puts more burden on the programmer.
 
-### 6. Simplified Scoping Rules
+### 6. Lexical Scoping with Closures
 
-Our language uses simple function-level scoping without closures, which is easier to implement but less powerful than lexical scoping with closures.
+Our language implements lexical scoping with closure support, where variables are visible within their declaring scope and any inner functions. When a variable is referenced, the interpreter looks for it in the current scope, then in parent scopes up the chain. This enables powerful patterns like function factories and encapsulated state.
 
 ### 7. No Object-Oriented Features
 
@@ -2697,6 +2782,48 @@ console_put("The average is: " + avg);
 ```
 
 This example demonstrates array creation, indexing, iteration with a while loop, and using the built-in `io_put` and `io_get` functions to work with JSON data.
+
+### Closures and Function Factories
+
+Our language's support for closures enables powerful programming patterns:
+
+```
+// Define a function factory that creates customized multiplier functions
+def createMultiplier(factor) {
+  // Return a function that "remembers" the factor value
+  return def(x) {
+    return x * factor;
+  };
+}
+
+// Create specialized multiplier functions
+let double = createMultiplier(2);
+let triple = createMultiplier(3);
+let quadruple = createMultiplier(4);
+
+// Use the functions
+console_put("Double 5: " + double(5));     // 10
+console_put("Triple 5: " + triple(5));     // 15
+console_put("Quadruple 5: " + quadruple(5)); // 20
+
+// Another closure example: create a counter
+def createCounter(start, step) {
+  let count = start;
+  
+  return def() {
+    let current = count;
+    count = count + step;
+    return current;
+  };
+}
+
+let counter = createCounter(1, 2);
+console_put(counter()); // 1
+console_put(counter()); // 3
+console_put(counter()); // 5
+```
+
+This example demonstrates how closures can maintain state between function calls and how function factories can create specialized functions that share implementation but differ in behavior.
 
 ### Interactive I/O Examples
 
