@@ -102,10 +102,13 @@ export class EvaluationContext {
    * 
    * @param {Object} jsonData - The initial JSON data object
    * @param {Array} consoleOutput - The array to collect console output
+   * @param {EvaluationContext} parentContext - The parent context for closures
    */
-  constructor(jsonData = {}, consoleOutput = []) {
+  constructor(jsonData = {}, consoleOutput = [], parentContext = null) {
     // Execution context variables (user-defined)
     this.variables = {};
+    // Parent context for closure support
+    this.parentContext = parentContext;
     // JSON data for I/O operations (external data)
     this.jsonData = jsonData;
     // Console output buffer for logging
@@ -145,7 +148,7 @@ export class EvaluationContext {
    * @throws {Error} If the variable is not defined
    */
   lookupVariable(name) {
-    // First check variables
+    // First check variables in current context
     if (name in this.variables) {
       return this.variables[name];
     }
@@ -153,6 +156,15 @@ export class EvaluationContext {
     // Then check functions (for function calls)
     if (name in this.functions) {
       return this.functions[name];
+    }
+    
+    // Check parent context if available (closure support)
+    if (this.parentContext) {
+      try {
+        return this.parentContext.lookupVariable(name);
+      } catch (e) {
+        // Continue to environment check if parent doesn't have it
+      }
     }
     
     // Finally check environment
@@ -179,6 +191,19 @@ export class EvaluationContext {
    * @returns {*} The assigned value
    */
   assignVariable(name, value) {
+    // Check if the variable exists in a parent context and update there
+    if (!(name in this.variables) && this.parentContext) {
+      try {
+        // Try to look up the variable in parent contexts
+        this.parentContext.lookupVariable(name);
+        // If we get here, the variable exists in the parent context, so update it there
+        return this.parentContext.assignVariable(name, value);
+      } catch (e) {
+        // Variable doesn't exist in parent contexts, assign it in current context
+      }
+    }
+    
+    // Assign/update in the current context
     this.variables[name] = value;
     return value;
   }
@@ -314,10 +339,12 @@ export class EvaluationContext {
 
   /**
    * Create a child context for a function call
+   * @param {Object} [parameterVars={}] - Variables to initialize in the child context (function parameters)
    * @returns {EvaluationContext} A new child context
    */
-  createChildContext() {
-    const childContext = new EvaluationContext(this.jsonData, this.consoleOutput);
+  createChildContext(parameterVars = {}) {
+    // Create a new context that inherits from this context for closure support
+    const childContext = new EvaluationContext(this.jsonData, this.consoleOutput, this);
     
     // Copy registered functions
     Object.keys(this.functions).forEach(key => {
@@ -327,6 +354,13 @@ export class EvaluationContext {
         childContext.asyncFunctions.add(key);
       }
     });
+    
+    // Set up parameter variables if provided
+    if (parameterVars && typeof parameterVars === 'object') {
+      Object.keys(parameterVars).forEach(key => {
+        childContext.variables[key] = parameterVars[key];
+      });
+    }
     
     return childContext;
   }

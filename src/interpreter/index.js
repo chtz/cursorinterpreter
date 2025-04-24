@@ -322,6 +322,11 @@ export async function evaluate(ast, context) {
       const blockStatements = ast.statements || ast.body || [];
       for (const statement of blockStatements) {
         blockResult = await evaluate(statement, context);
+        
+        // Early return if we encounter a ReturnValue
+        if (blockResult instanceof ReturnValue) {
+          return blockResult;
+        }
       }
       return blockResult;
     }
@@ -343,6 +348,11 @@ export async function evaluate(ast, context) {
       
       while (await evaluate(whileCondition, context)) {
         whileResult = await evaluate(whileBody, context);
+        
+        // Early return if we hit a return statement
+        if (whileResult instanceof ReturnValue) {
+          return whileResult;
+        }
       }
       return whileResult;
     }
@@ -350,25 +360,42 @@ export async function evaluate(ast, context) {
     case 'CallExpression': {
       // Extract the function name and handle different node structures
       let functionName = null;
+      let callee = null;
+      
       if (ast.callee) {
         if (typeof ast.callee === 'string') {
           functionName = ast.callee;
         } else if (ast.callee.type === 'Identifier') {
           functionName = ast.callee.name;
+        } else {
+          // This might be a complex expression that evaluates to a function
+          // For example, an anonymous function
+          callee = await evaluate(ast.callee, context);
         }
       }
       
+      // Evaluate all arguments regardless of the callee type
+      const args = [];
+      for (const arg of (ast.arguments || [])) {
+        args.push(await evaluate(arg, context));
+      }
+      
+      // If we have a direct callee from an expression evaluation, use it
+      if (callee && typeof callee === 'function') {
+        const result = await callee(args);
+        // Unwrap ReturnValue if present
+        if (result instanceof ReturnValue) {
+          return result.value;
+        }
+        return result;
+      }
+      
+      // Otherwise, use the function name to look up the function
       if (functionName) {
         // First check for library functions directly
         const libraryFunc = context.lookupFunction(functionName);
         
         if (libraryFunc) {
-          // Evaluate all arguments
-          const args = [];
-          for (const arg of (ast.arguments || [])) {
-            args.push(await evaluate(arg, context));
-          }
-          
           // Check if this is an async function
           if (context.isAsyncFunction && context.isAsyncFunction(functionName)) {
             return await libraryFunc(...args);
@@ -379,56 +406,60 @@ export async function evaluate(ast, context) {
         
         // Then check for special IO functions (for backward compatibility)
         if (functionName === 'io_get' && ast.arguments && ast.arguments.length === 1) {
-          const key = await evaluate(ast.arguments[0], context);
+          const key = args[0];
           return context.io_get(key);
         }
         
         if (functionName === 'io_put' && ast.arguments && ast.arguments.length === 2) {
-          const key = await evaluate(ast.arguments[0], context);
-          const value = await evaluate(ast.arguments[1], context);
+          const key = args[0];
+          const value = args[1];
           return context.io_put(key, value);
         }
         
         if (functionName === 'console_put' && ast.arguments && ast.arguments.length >= 1) {
-          const value = await evaluate(ast.arguments[0], context);
+          const value = args[0];
           return context.console_put(value);
         }
         
-        // Check for user-defined functions
-        const func = context.lookupVariable(functionName);
-        if (typeof func === 'object' && func !== null && 'params' in func && 'body' in func) {
-          // Evaluate all arguments
-          const funcArgs = [];
-          for (const arg of (ast.arguments || [])) {
-            funcArgs.push(await evaluate(arg, context));
+        // Look up the function in the context
+        try {
+          const func = context.lookupVariable(functionName);
+          
+          // Handle different function types
+          if (typeof func === 'function') {
+            // This is a function we can directly call (likely from FunctionDeclaration)
+            return await func(args);
+          } else if (typeof func === 'object' && func !== null && 'params' in func && 'body' in func) {
+            // Legacy format - function stored as an object with params and body
+            // Create a new context with function parameters
+            const callContext = context.createChildContext();
+            
+            // Bind arguments to parameters
+            for (let i = 0; i < func.params.length; i++) {
+              callContext.assignVariable(func.params[i], args[i] || null);
+            }
+            
+            // Copy registered functions to new context
+            for (const key in context.functions) {
+              callContext.registerFunction(
+                key, 
+                context.functions[key], 
+                context.asyncFunctions && context.asyncFunctions.has(key)
+              );
+            }
+            
+            // Evaluate the function body with the new context
+            const result = await evaluate(func.body, callContext);
+            
+            // Return the result - it could be a ReturnValue which needs unwrapping
+            if (result && typeof result === 'object' && result.type === 'ReturnValue') {
+              return result.value;
+            }
+            
+            return result;
           }
-          
-          // Create a new context with function parameters
-          const callContext = context.createChildContext();
-          
-          // Bind arguments to parameters
-          for (let i = 0; i < func.params.length; i++) {
-            callContext.assignVariable(func.params[i], funcArgs[i] || null);
-          }
-          
-          // Copy registered functions to new context
-          for (const key in context.functions) {
-            callContext.registerFunction(
-              key, 
-              context.functions[key], 
-              context.asyncFunctions && context.asyncFunctions.has(key)
-            );
-          }
-          
-          // Evaluate the function body with the new context
-          const result = await evaluate(func.body, callContext);
-          
-          // Return the result - it could be a ReturnValue which needs unwrapping
-          if (result && typeof result === 'object' && result.type === 'ReturnValue') {
-            return result.value;
-          }
-          
-          return result;
+        } catch (error) {
+          // Function lookup failed, will throw below
         }
       }
       
@@ -437,7 +468,11 @@ export async function evaluate(ast, context) {
     }
 
     case 'ReturnStatement':
-      return ast.argument ? await evaluate(ast.argument || ast.value, context) : null;
+      if (ast.argument || ast.value) {
+        const returnValue = await evaluate(ast.argument || ast.value, context);
+        return new ReturnValue(returnValue);
+      }
+      return new ReturnValue(null);
 
     case 'ArrayExpression': {
       const elements = [];

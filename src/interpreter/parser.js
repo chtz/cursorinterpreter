@@ -68,6 +68,7 @@ export class Parser {
     this.registerPrefix(TokenType.MINUS, this.parsePrefixExpression.bind(this));
     this.registerPrefix(TokenType.NOT, this.parsePrefixExpression.bind(this));
     this.registerPrefix(TokenType.LBRACKET, this.parseArrayLiteral.bind(this));
+    this.registerPrefix(TokenType.DEF, this.parseAnonymousFunction.bind(this));
     
     // Register infix parsers
     this.registerInfix(TokenType.PLUS, this.parseInfixExpression.bind(this));
@@ -250,19 +251,33 @@ export class Parser {
     const functionDecl = new AST.FunctionDeclaration();
     functionDecl.position = { line: this.currentToken.line, column: this.currentToken.column };
     
-    // Parse function name
-    if (!this.expectPeek(TokenType.IDENTIFIER)) {
-      return null;
+    // Skip the 'def' keyword
+    this.nextToken();
+    
+    // Check if this is an anonymous function
+    if (this.currentTokenIs(TokenType.LPAREN)) {
+      // Anonymous function, no name
+      functionDecl.parameters = this.parseFunctionParameters();
+    } else {
+      // Named function
+      if (!this.currentTokenIs(TokenType.IDENTIFIER)) {
+        this.errors.push({
+          message: "Expected function name or parameters",
+          line: this.currentToken?.line,
+          column: this.currentToken?.column
+        });
+        return null;
+      }
+      
+      functionDecl.name = this.currentToken.literal;
+      
+      // Parse parameters
+      if (!this.expectPeek(TokenType.LPAREN)) {
+        return null;
+      }
+      
+      functionDecl.parameters = this.parseFunctionParameters();
     }
-    
-    functionDecl.name = this.currentToken.literal;
-    
-    // Parse parameters
-    if (!this.expectPeek(TokenType.LPAREN)) {
-      return null;
-    }
-    
-    functionDecl.parameters = this.parseFunctionParameters();
     
     // Parse function body
     if (!this.expectPeek(TokenType.LBRACE)) {
@@ -272,6 +287,39 @@ export class Parser {
     functionDecl.body = this.parseBlockStatement();
     
     return functionDecl;
+  }
+  
+  /**
+   * Parse an anonymous function expression
+   * This is used when 'def' is found in an expression context
+   */
+  parseAnonymousFunction() {
+    const functionExpr = new AST.FunctionDeclaration();
+    functionExpr.position = { line: this.currentToken.line, column: this.currentToken.column };
+    
+    // Skip the 'def' keyword
+    this.nextToken();
+    
+    // Parse parameters
+    if (!this.currentTokenIs(TokenType.LPAREN)) {
+      this.errors.push({
+        message: "Expected '(' after 'def' in anonymous function",
+        line: this.currentToken?.line,
+        column: this.currentToken?.column
+      });
+      return null;
+    }
+    
+    functionExpr.parameters = this.parseFunctionParameters();
+    
+    // Parse function body
+    if (!this.expectPeek(TokenType.LBRACE)) {
+      return null;
+    }
+    
+    functionExpr.body = this.parseBlockStatement();
+    
+    return functionExpr;
   }
   
   /**

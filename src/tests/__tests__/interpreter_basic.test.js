@@ -356,22 +356,38 @@ describe('Control flow', () => {
 
   test('Return in nested blocks', async () => {
     const ctx = new TestContext();
-    await ctx.evaluate(`
+    const result = await ctx.evaluate(`
       def nestedReturn(x) {
+        console_put("Starting with x = " + x);
         if (x > 0) {
+          console_put("x > 0, entering while loop");
           while (x > 5) {
             x = x - 1;
+            console_put("In while loop, x = " + x);
             if (x == 7) {
+              console_put("x == 7, returning");
               return "found 7";
             }
           }
+          console_put("After while loop, returning");
           return "positive but <= 5";
         } else {
+          console_put("x <= 0, returning");
           return "negative or zero";
         }
       }
-      nestedReturn(9);
+      
+      console_put("Calling nestedReturn(9)");
+      let result = nestedReturn(9);
+      console_put("Result: " + result);
+      result;
     `);
+    console.log("Test result:", result);
+    console.log("Console output:", ctx.consoleOutput);
+    console.log("Eval result:", ctx.evalResult);
+    if (ctx.evalResult && ctx.evalResult.errors) {
+      console.log("Errors:", ctx.evalResult.errors);
+    }
     ctx.assertEvalSuccess();
     ctx.assertEvalResult("found 7");
   });

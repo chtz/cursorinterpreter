@@ -151,7 +151,22 @@ export class AssignmentStatement extends Node {
   
   async evaluate(context) {
     const value = await this.value.evaluate(context);
-    return context.getEnvironment().assign(this.name, value, this.position);
+    
+    // Try to assign directly to the context's variables
+    try {
+      return context.assignVariable(this.name, value);
+    } catch (error) {
+      // If that fails, try to assign to the environment
+      try {
+        return context.getEnvironment().assign(this.name, value, this.position);
+      } catch (envError) {
+        throw new RuntimeError(
+          `Cannot assign to undefined variable '${this.name}'`,
+          this.position.line,
+          this.position.column
+        );
+      }
+    }
   }
 }
 
@@ -174,28 +189,27 @@ export class FunctionDeclaration extends Node {
   }
   
   async evaluate(context) {
+    // Create a function that captures the current context for closure support
     const func = async (args) => {
-      // Create a new environment with the parent as the current environment
-      const functionEnv = context.getEnvironment().extend();
+      // Create parameter object to initialize the child context
+      const paramVars = {};
       
       // Bind arguments to parameters
       for (let i = 0; i < this.parameters.length; i++) {
         const param = this.parameters[i];
         const arg = i < args.length ? args[i] : null;
-        
-        functionEnv.define(param, arg);
+        paramVars[param] = arg;
       }
       
-      // Execute the function body with the new environment
-      const previousEnv = context.environment;
-      context.environment = functionEnv;
+      // Create a new child context that inherits from the current context (closure)
+      // and initialize it with the parameter variables
+      const functionContext = context.createChildContext(paramVars);
       
       let result;
       try {
-        result = await this.body.evaluate(context);
-      } finally {
-        // Restore the original environment
-        context.environment = previousEnv;
+        result = await this.body.evaluate(functionContext);
+      } catch (error) {
+        throw error;
       }
       
       // Unwrap ReturnValue if present
@@ -206,8 +220,13 @@ export class FunctionDeclaration extends Node {
       return result;
     };
     
-    // Store the function in the environment
-    return context.getEnvironment().define(this.name, func);
+    // If this is a named function, store it in the environment
+    if (this.name) {
+      return context.getEnvironment().define(this.name, func);
+    }
+    
+    // For anonymous functions, return the function directly
+    return func;
   }
 }
 
