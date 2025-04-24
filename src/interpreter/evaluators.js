@@ -86,26 +86,6 @@ export function evaluateFunctionCall(node, context) {
   // Evaluate arguments
   const args = node.arguments.map(arg => evaluateExpression(arg, context));
   
-  if (node.name === "console.log") {
-    // Handle built-in console.log function
-    const message = args.map(arg => String(arg)).join(' ');
-    context.console_put(message);
-    return null;
-  } else if (node.name === "io.get") {
-    // Handle built-in io.get function
-    if (args.length !== 1) {
-      throw new Error("io.get requires exactly one argument");
-    }
-    return context.io_get(args[0]);
-  } else if (node.name === "io.put") {
-    // Handle built-in io.put function
-    if (args.length !== 2) {
-      throw new Error("io.put requires exactly two arguments");
-    }
-    context.io_put(args[0], args[1]);
-    return args[1];
-  }
-  
   // Look up user-defined function
   const func = context.lookupFunction(node.name);
   if (!func) {
