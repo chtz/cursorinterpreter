@@ -1,3 +1,15 @@
+> ⚠️ **Warning: Abandoned Code Zone Ahead!**  
+> 
+> This repository has entered a state of deep hibernation. 🐻💤  
+> Development has officially come to a halt, and the commit hamster has left the wheel.  
+> 
+> No need to poke around here—nothing new will hatch from this egg. 🥚🚫  
+> 
+> But don't despair, fellow code traveler! The journey continues at a newer, shinier place:  
+> 👉 [https://github.com/chtz/interpreter-ij](https://github.com/chtz/interpreter-ij)  
+> 
+> Follow the link, and may the source be with you. 🚀👩‍💻
+
 # Cursor Interpreter
 
 A simple, lightweight code interpreter built with modern web technologies following KISS, DRY, and YAGNI principles. The project includes both a custom language interpreter and a browser-based IDE for writing and running code.
